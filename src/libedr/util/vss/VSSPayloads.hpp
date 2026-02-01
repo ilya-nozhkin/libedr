@@ -1,6 +1,7 @@
 #ifndef LIBEDR_UTIL_VSS_VSSPAYLOADS_HPP
 #define LIBEDR_UTIL_VSS_VSSPAYLOADS_HPP
 
+#include "libedr/util/adt/BitStream.hpp"
 #include "libedr/util/vss/VSS.hpp"
 
 #include <cassert>
@@ -106,6 +107,51 @@ struct String {
 };
 
 static_assert(HasPayload<String> && HasPayload<String::Format>);
+
+template <class T> struct alignas(alignof(T)) DependentBits {
+  using Payload = vss::Payload<>;
+
+  BitStream<T> Stream(size_t offset = 0) {
+    return BitStream<T>(reinterpret_cast<T *>(this), offset);
+  }
+
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             size_t num_reserved_bits) {
+    os.Allocate(GetNumBytes(num_reserved_bits));
+  }
+
+  template <class U>
+  static void EmplacePayload(vss::OutputStream auto &os, BitStream<U> &src,
+                             size_t num_bits) {
+    auto [_, ptr] = os.Allocate(GetNumBytes(num_bits));
+    if (nullptr == ptr)
+      return;
+
+    BitStream<T> writer(reinterpret_cast<T *>(ptr));
+    writer.Write(src, num_bits);
+  }
+
+  template <class U>
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             const BitView<U> &src) {
+    EmplacePayload(os, src.Stream(), src.GetNumBits());
+  }
+
+  std::optional<size_t> SizeOfPayload(Payload & /*payload*/,
+                                      size_t /*max_size*/, size_t num_bits) {
+    return GetNumBytes(num_bits);
+  }
+
+  DependentBits(const DependentBits &) = delete;
+  DependentBits(DependentBits &&) = delete;
+
+private:
+  static size_t GetNumBytes(size_t num_bits) {
+    constexpr auto mask = 8 * sizeof(T) - 1;
+    auto aligned_num_bits = (num_bits + mask) & ~mask;
+    return aligned_num_bits / 8;
+  }
+};
 
 namespace {
 

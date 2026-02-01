@@ -2,8 +2,11 @@
 #define LIBEDR_UTIL_ADT_BITSTREAM_HPP
 
 #include <cassert>
+#include <charconv>
 #include <concepts>
+#include <format>
 #include <memory>
+#include <string_view>
 
 namespace edr {
 
@@ -44,6 +47,14 @@ public:
     }
 
     return result;
+  }
+
+  void Skip(size_t num_bits) {
+    m_offset += num_bits;
+
+    auto num_advances = m_offset / (8 * sizeof(T));
+    m_offset %= (8 * sizeof(T));
+    m_storage += num_advances;
   }
 
   size_t GetOffset() const { return m_offset; }
@@ -111,6 +122,95 @@ public:
 template <class T> BitStream(T *data, size_t offset) -> BitStream<T>;
 template <class T> BitStream(T *data) -> BitStream<T>;
 
+template <class T> class BitView {
+public:
+  explicit BitView(T *data, size_t num_bits, size_t offset = 0)
+      : m_data(data, offset), m_num_bits(num_bits) {}
+
+  explicit BitView(const BitStream<T> &data, size_t num_bits)
+      : m_data(data), m_num_bits(num_bits) {}
+
+  size_t GetNumBits() const { return m_num_bits; }
+
+  BitStream<T> Stream(size_t offset = 0) const {
+    auto copy = m_data;
+    if (0 != offset)
+      copy.Skip(offset);
+
+    return copy;
+  }
+
+private:
+  BitStream<T> m_data;
+  size_t m_num_bits;
+};
+
 } // namespace edr
+
+template <class T> struct std::formatter<edr::BitView<T>, char> {
+  bool reverse = false;
+
+  template <class ParseContext>
+  constexpr ParseContext::iterator parse(ParseContext &ctx) {
+    auto it = ctx.begin();
+    while (*it != '}') {
+      if (*it == 'r')
+        reverse = true;
+
+      it++;
+    }
+
+    return it;
+  }
+
+  template <class FmtContext>
+  FmtContext::iterator format(const edr::BitView<T> &bits,
+                              FmtContext &ctx) const {
+    constexpr size_t num_chunk_bits = 8 * sizeof(T);
+
+    auto it = ctx.out();
+
+    size_t num_bits = bits.GetNumBits();
+
+    it = std::format_to(it, "({} {}) ", num_bits,
+                        reverse ? "reversed" : "forward");
+
+    if (reverse) {
+      while (num_bits != 0) {
+        size_t this_time = std::min<size_t>(num_chunk_bits, num_bits);
+        size_t offset = num_bits - this_time;
+
+        edr::BitStream<T> stream = bits.Stream(offset);
+        T chunk = stream.template Read<T>(this_time);
+
+        char buffer[num_chunk_bits];
+        for (size_t i = 0; i < this_time; i++)
+          buffer[i] = 0 != (chunk & (static_cast<T>(1) << (this_time - i - 1)))
+                          ? '1'
+                          : '0';
+
+        it = std::format_to(it, "{}", std::string_view(buffer, this_time));
+
+        num_bits -= this_time;
+      }
+    } else {
+      edr::BitStream<T> stream = bits.Stream();
+      while (num_bits != 0) {
+        size_t this_time = std::min<size_t>(num_chunk_bits, num_bits);
+        T chunk = stream.template Read<T>(this_time);
+
+        char buffer[num_chunk_bits];
+        for (size_t i = 0; i < this_time; i++)
+          buffer[i] = 0 != (chunk & (static_cast<T>(1) << i)) ? '1' : '0';
+
+        it = std::format_to(it, "{}", std::string_view(buffer, this_time));
+
+        num_bits -= this_time;
+      }
+    }
+
+    return it;
+  }
+};
 
 #endif
