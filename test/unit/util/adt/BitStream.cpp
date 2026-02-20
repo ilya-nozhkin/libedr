@@ -8,7 +8,7 @@ using namespace testing;
 
 TEST(BitStream, can_write_and_read_different_sizes) {
   uint32_t storage[16];
-  BitStream writer(storage, 0);
+  BitStream writer(storage, 8 * sizeof(storage));
 
   writer.Write<uint32_t>(0x11223344u, 32);
   writer.Write<uint32_t>(0xaabbccddu, 16);
@@ -18,7 +18,7 @@ TEST(BitStream, can_write_and_read_different_sizes) {
   uint32_t result[16];
   memcpy(result, storage, sizeof(result));
 
-  BitStream reader(result);
+  BitStream reader(result, 8 * sizeof(result));
   uint64_t part1 = reader.Read<uint64_t>(64);
   uint32_t part2 = reader.Read<uint32_t>(24);
   uint16_t part3 = reader.Read<uint16_t>(16);
@@ -39,15 +39,15 @@ TEST(BitStream, can_write_aligned_streams) {
     storage1[i] = (i << 24) + (i << 16) + (i << 8) + i;
 
   uint16_t storage2[2 * num_chunks];
-  BitStream source(storage1);
-  BitStream writer(storage2);
+  BitStream source(storage1, 8 * sizeof(storage1));
+  BitStream writer(storage2, 8 * sizeof(storage2));
 
   writer.Write(source, 8 * sizeof(storage1[0]) * num_chunks);
 
   uint32_t result[num_chunks];
   memcpy(result, storage2, sizeof(result));
 
-  BitStream reader(result);
+  BitStream reader(result, 8 * sizeof(result));
   for (size_t i = 0; i < num_chunks; i++)
     EXPECT_EQ(storage1[i], reader.Read<uint32_t>(32));
 }
@@ -59,15 +59,15 @@ TEST(BitStream, can_write_misaligned_streams) {
     storage1[i] = (i << 24) + (i << 16) + (i << 8) + i;
 
   uint16_t storage2[2 * num_chunks];
-  BitStream source(storage1, 16);
-  BitStream writer(storage2, 8);
+  BitStream source(storage1, 8 * sizeof(storage1), 16);
+  BitStream writer(storage2, 8 * sizeof(storage2), 8);
 
   writer.Write(source, 8 * sizeof(storage1[0]) * num_chunks - 16);
 
   uint32_t result[num_chunks];
   memcpy(result, storage2, sizeof(result));
 
-  BitStream reader(result, 8);
+  BitStream reader(result, 8 * sizeof(result), 8);
   for (size_t i = 0; i < num_chunks - 1; i++)
     EXPECT_EQ(((i + 1) << 24) + ((i + 1) << 16) + (i << 8) + i,
               reader.Read<uint32_t>(32));

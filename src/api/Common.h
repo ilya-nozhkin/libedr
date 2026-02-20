@@ -3,6 +3,14 @@
 
 #include <memory>
 
+#ifndef SWIG_PYTHON_THREAD_BEGIN_ALLOW
+#define SWIG_PYTHON_THREAD_BEGIN_ALLOW
+#endif
+
+#ifndef SWIG_PYTHON_THREAD_END_ALLOW
+#define SWIG_PYTHON_THREAD_END_ALLOW
+#endif
+
 #define TRANSACTION_BODY(DRIVER_API_NAME, DRIVER_LIB_NAME)                     \
   friend class DRIVER_API_NAME;                                                \
                                                                                \
@@ -57,7 +65,9 @@ public:                                                                        \
     if (!m_task || !(*m_task))                                                 \
       return;                                                                  \
                                                                                \
+    SWIG_PYTHON_THREAD_BEGIN_ALLOW;                                            \
     m_driver->Join(*m_task);                                                   \
+    SWIG_PYTHON_THREAD_END_ALLOW;                                              \
   }                                                                            \
                                                                                \
   void Next() {                                                                \

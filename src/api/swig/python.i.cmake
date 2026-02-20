@@ -1,8 +1,9 @@
-%module edr
+%module("threads"=1) edr
 
 %feature("autodoc", "1");
 
 %nodefaultctor;
+%nothread;
 
 %{
 @EDR_API_C_INCLUDES@

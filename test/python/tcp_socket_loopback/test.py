@@ -1,6 +1,7 @@
 import unittest
 import threading
 import edr
+import time
 
 
 class TestTCPSocketLoopback(unittest.TestCase):
@@ -24,6 +25,13 @@ class TestTCPSocketLoopback(unittest.TestCase):
             )
 
             self.assertTrue(client_stream.IsValid(), client_error.Message())
+
+            # Make sure the reading request is issued first to test that
+            # the 'Join' function releases the GIL. If it does not release it,
+            # and the read request comes first, then the test will never
+            # complete because the writing thread will be waiting for the
+            # reading thread.
+            time.sleep(0)
 
             xact: edr.ByteStreamTransaction = client_stream.Initiate("write")
             xact.WriteBytes(data1)

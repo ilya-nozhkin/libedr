@@ -615,16 +615,21 @@ private:
 
 class DriverBase {
 public:
+  DriverBase(std::pmr::memory_resource &resource) : m_resource(resource) {}
+
   virtual ~DriverBase() = default;
 
   virtual DriverID GetID() = 0;
   virtual std::string_view GetName() = 0;
+
+protected:
+  FreeListAllocatorResource m_resource;
 };
 
 template <DriverID t_driver_id, IsAction TAction>
 class Driver : public DriverBase,
-               public edr::Asynchronous<FreeListAllocator<std::byte>> {
-  using Asynchronous = edr::Asynchronous<FreeListAllocator<std::byte>>;
+               public edr::Asynchronous<ByteFreeListAllocator> {
+  using Asynchronous = edr::Asynchronous<ByteFreeListAllocator>;
 
   template <class Arg> struct ExpandArg {
     template <class F> static auto Do(F &&func, Arg &&arg) {
@@ -651,7 +656,7 @@ public:
   using CheckedTask = Asynchronous::template CheckedTask<Args...>;
 
   Driver(const DriverContext &ctx, std::string_view name)
-      : Asynchronous(FreeListAllocator<std::byte>(ctx.TaskFrameResource())),
+      : DriverBase(ctx.TaskFrameResource()), Asynchronous(m_resource),
         m_memory_resource(ctx.TransactionBufferResource()),
         m_logger(ctx.logger), m_name(name), m_buffers(m_memory_resource) {}
 

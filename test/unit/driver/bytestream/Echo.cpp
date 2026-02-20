@@ -1,4 +1,5 @@
 #include "Mocks.h"
+#include "test/unit/driver/Mocks.h"
 
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/Error.hpp"

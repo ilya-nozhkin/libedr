@@ -93,6 +93,8 @@ public:
 
 class MockAllocatorProxy {
 public:
+  using value_type = std::byte;
+
   MockAllocatorProxy(MockAllocator &allocator) : m_allocator(allocator) {}
 
   void *allocate(std::size_t size) { return m_allocator.allocate(size); }

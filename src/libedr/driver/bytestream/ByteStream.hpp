@@ -25,12 +25,14 @@ public:
   virtual void Terminate() = 0;
 };
 
-class DeferredByteStream : public ByteStream {
+class DeferredByteStream final : public ByteStream {
 public:
   DeferredByteStream(const DriverContext &ctx, std::string_view name,
                      BlockingByteStream &stream)
       : ByteStream(ctx, name), m_stream(stream), m_endpoint(*this),
         m_write_buffer(ctx.TransactionBufferResource()) {}
+
+  ~DeferredByteStream() override { Terminate(); }
 
   bool Serve(bool wait_if_empty) {
     return m_endpoint.Serve(wait_if_empty, [this](PendingTransaction &pending) {

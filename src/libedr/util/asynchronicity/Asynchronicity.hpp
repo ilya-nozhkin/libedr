@@ -10,6 +10,7 @@
 #include <memory>
 #include <optional>
 #include <tuple>
+#include <type_traits>
 #include <utility>
 
 namespace edr {
@@ -38,11 +39,14 @@ template <class R> struct TaskResultHelper<R> {
 namespace {
 
 template <class T>
-concept TaskOwner = requires(T asynchronous, std::byte *ptr, size_t size) {
+concept TaskOwner = requires(T asynchronous, void *ptr, size_t size) {
   {
     asynchronous.GetFrameAllocator().allocate(size)
   } -> std::convertible_to<void *>;
-  { asynchronous.GetFrameAllocator().deallocate(ptr, size) };
+  {
+    asynchronous.GetFrameAllocator().deallocate(
+        static_cast<T::FrameAllocator::value_type *>(ptr), size)
+  };
 };
 
 } // namespace
@@ -291,8 +295,7 @@ private:
   FallbackStorage<t_def_init, R...> m_fallback;
 };
 
-template <bool t_def_init, TaskOwner Owner, class... R>
-struct Promise : public Resolver<R...> {
+template <TaskOwner Owner> struct OwnedFrame {
   template <class... Args>
   static void *operator new(std::size_t size, Owner &self,
                             Args &&...args) noexcept {
@@ -315,7 +318,10 @@ struct Promise : public Resolver<R...> {
     Owner *self = *reinterpret_cast<Owner **>(full_ptr);
     self->GetFrameAllocator().deallocate(full_ptr, this_ptr_size + size);
   }
+};
 
+template <bool t_def_init, TaskOwner Owner, class... R>
+struct Promise : public Resolver<R...>, public OwnedFrame<Owner> {
   static OwnedTask<t_def_init, Owner, R...>
   get_return_object_on_allocation_failure() {
     return OwnedTask<t_def_init, Owner, R...>(nullptr);
@@ -353,13 +359,126 @@ struct Promise : public Resolver<R...> {
   }
 };
 
+template <class... Args> struct GeneratorArguments {
+  using Type = TaskResultHelper<Args...>::Type;
+
+  template <class... TArgs> void Set(TArgs &&...new_args) {
+    if constexpr (1 == sizeof...(new_args))
+      args.emplace(std::forward<TArgs>(new_args)...);
+    else
+      args.emplace(Type{std::forward<TArgs>(new_args)...});
+  }
+
+  bool await_ready() const noexcept { return args.has_value(); }
+
+  void await_suspend(std::coroutine_handle<> continuation) noexcept {}
+
+  Type await_resume() {
+    Type result = std::move(*args);
+    args.reset();
+    return result;
+  }
+
+  std::optional<Type> args;
+};
+
+template <> struct GeneratorArguments<> {
+  using Type = void;
+
+  template <class... TArgs> void Set(TArgs &&...new_args) { ready = true; }
+
+  bool await_ready() const noexcept { return ready; }
+
+  void await_suspend(std::coroutine_handle<> continuation) noexcept {}
+
+  void await_resume() { ready = false; }
+
+  bool ready = false;
+};
+
+template <TaskOwner Owner, class TPromise> struct OwnedGenerator;
+
+template <TaskOwner Owner, class TGeneratorArguments, class... R>
+struct GeneratorPromise final : public OwnedFrame<Owner> {
+  using ResultType = TaskResultHelper<R...>::Type;
+
+  OwnedGenerator<Owner, GeneratorPromise> get_return_object() {
+    return OwnedGenerator<Owner, GeneratorPromise>(this);
+  }
+
+  static OwnedGenerator<Owner, GeneratorPromise>
+  get_return_object_on_allocation_failure() {
+    return OwnedGenerator<Owner, GeneratorPromise>(nullptr);
+  }
+
+  std::suspend_never initial_suspend() noexcept { return {}; }
+  std::suspend_always final_suspend() noexcept { return {}; }
+
+  template <class Arg> TGeneratorArguments &yield_value(Arg &&arg) {
+    result.emplace(std::forward<Arg>(arg));
+    return args;
+  }
+
+  void return_void() {}
+
+  void unhandled_exception() {}
+
+  TGeneratorArguments args;
+  std::optional<ResultType> result;
+};
+
+template <TaskOwner Owner, class TPromise> struct OwnedGenerator {
+  using promise_type = TPromise;
+
+  OwnedGenerator(TPromise *promise)
+      : m_handle(
+            nullptr == promise
+                ? std::coroutine_handle<TPromise>(nullptr)
+                : std::coroutine_handle<TPromise>::from_promise(*promise)) {}
+
+  OwnedGenerator(OwnedGenerator &&from) : m_handle(from) {
+    from.m_handle = nullptr;
+  }
+
+  OwnedGenerator(const OwnedGenerator &) = delete;
+  OwnedGenerator &operator=(const OwnedGenerator &) = delete;
+  OwnedGenerator &operator=(OwnedGenerator &&) = delete;
+
+  ~OwnedGenerator() {
+    if (m_handle)
+      m_handle.destroy();
+  }
+
+  operator bool() { return m_handle && !m_handle.done(); }
+
+  template <class... TArgs> TPromise::ResultType operator()(TArgs &&...args) {
+    assert(m_handle);
+
+    auto &promise = m_handle.promise();
+    promise.args.Set(std::forward<TArgs>(args)...);
+
+    m_handle.resume();
+
+    return std::move(*promise.result);
+  }
+
+private:
+  std::coroutine_handle<TPromise> m_handle;
+};
+
 template <class A = std::allocator<std::byte>> class Asynchronous {
 public:
   using FrameAllocator = A;
+  static_assert(sizeof(typename A::value_type) == sizeof(std::byte));
 
   template <class... R> using Task = OwnedTask<true, Asynchronous<A>, R...>;
   template <class... R>
   using CheckedTask = OwnedTask<false, Asynchronous<A>, R...>;
+
+  template <class TGeneratorArguments, class... R>
+  using Generator = OwnedGenerator<
+      Asynchronous<A>,
+      GeneratorPromise<Asynchronous<A>, TGeneratorArguments, R...>>;
 
   Asynchronous(const A &allocator = A{}) : m_allocator(allocator) {}
 

@@ -44,7 +44,17 @@ StringFromBytes(const std::span<const std::byte> &bytes) {
 }
 } // namespace
 
-class ByteStreamTunnel : public Asynchronous<FreeListAllocator<std::byte>>,
+class ByteStreamTunnelResourceStorage {
+public:
+  ByteStreamTunnelResourceStorage(std::pmr::memory_resource &resource)
+      : m_resource(resource) {}
+
+protected:
+  FreeListAllocatorResource m_resource;
+};
+
+class ByteStreamTunnel : public ByteStreamTunnelResourceStorage,
+                         public Asynchronous<ByteFreeListAllocator>,
                          public Tunnel {
   using DriverIndex = uint32_t;
   using TransactionKey = uint32_t;
@@ -60,6 +70,14 @@ public:
                     std::string_view name)
         : TDriver(tunnel.m_context, name), m_tunnel(tunnel),
           m_driver_index(driver_index) {}
+
+    ~TunnelledDriver() override { Terminate(); }
+
+    void Join(const std::coroutine_handle<> &to_complete) override {
+      m_tunnel.Join(to_complete);
+    }
+
+    void Terminate() override { m_tunnel.Terminate(); }
 
   private:
     CheckedTask<typename TDriver::Status>
@@ -136,12 +154,6 @@ public:
       co_return tx.Finish();
     }
 
-    void Join(const std::coroutine_handle<> &to_complete) override {
-      m_tunnel.Join(to_complete);
-    }
-
-    void Terminate() override { m_tunnel.Terminate(); }
-
     ByteStreamTunnel &m_tunnel;
     DriverIndex m_driver_index;
   };
@@ -149,13 +161,15 @@ public:
   template <class... Args> using Task = Asynchronous::template Task<Args...>;
 
   explicit ByteStreamTunnel(const DriverContext &ctx, ByteStream &m_bstream)
-      : Asynchronous(FreeListAllocator<std::byte>(ctx.TaskFrameResource())),
-        m_context(ctx), m_bstream(m_bstream),
-        m_my_drivers(ctx.TransactionBufferPMRAllocator()),
+      : ByteStreamTunnelResourceStorage(ctx.TaskFrameResource()),
+        Asynchronous(ByteFreeListAllocator(m_resource)), m_context(ctx),
+        m_bstream(m_bstream), m_my_drivers(ctx.TransactionBufferPMRAllocator()),
         m_driver_names(ctx.TransactionBufferResource()),
         m_remote_drivers(ctx.TransactionBufferPMRAllocator()),
         m_free_keys(ctx.TransactionBufferPMRAllocator()),
         m_pending_transactions(*this) {}
+
+  ~ByteStreamTunnel() { Terminate(); }
 
   bool RegisterDriver(DriverBase &driver) {
     auto *emplaced = m_my_drivers.Emplace(m_next_my_driver_index, driver);

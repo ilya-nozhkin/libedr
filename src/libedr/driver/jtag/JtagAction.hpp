@@ -9,7 +9,6 @@
 #include "libedr/util/vss/VSSPayloads.hpp"
 
 #include <cstddef>
-#include <span>
 
 namespace edr {
 
@@ -20,10 +19,10 @@ struct PutTMS {
   using Payload = vss::Payload<vss::DependentBits<uint32_t>>;
 
   template <class T>
-  PutTMS(const BitView<T> &bits) : num_bits(bits.GetNumBits()) {}
+  PutTMS(const BitStream<T> &bits) : num_bits(bits.GetNumBits()) {}
 
-  BitView<uint32_t> Bits() {
-    return BitView(vss::Get<0>(*this).Stream(), num_bits);
+  BitStream<const uint32_t> Bits() {
+    return vss::Get<0>(*this).Stream(num_bits);
   }
 
   template <StructureFormatter F> void Format(F &fmt) {
@@ -33,7 +32,7 @@ struct PutTMS {
 
   template <class T>
   static void EmplacePayload(vss::OutputStream auto &os,
-                             const BitView<T> &bits) {
+                             const BitStream<T> &bits) {
     Payload::Emplace(os, bits);
   }
 
@@ -44,7 +43,7 @@ struct PutTMS {
   struct Out {
     uint32_t num_put;
 
-    template <class T> Out(const BitView<T> &bits) {}
+    template <class T> Out(const BitStream<T> &bits) {}
 
     template <StructureFormatter F> void Format(F &fmt) {
       fmt.Value("{}", num_put);
@@ -63,11 +62,11 @@ struct PutTDI {
   using Payload = vss::Payload<vss::DependentBits<uint32_t>>;
 
   template <class T>
-  PutTDI(const BitView<T> &bits, uint32_t last_tms)
+  PutTDI(const BitStream<T> &bits, uint32_t last_tms)
       : num_bits(bits.GetNumBits()), last_tms(last_tms) {}
 
-  BitView<uint32_t> Bits() {
-    return BitView(vss::Get<0>(*this).Stream(), num_bits);
+  BitStream<const uint32_t> Bits() {
+    return vss::Get<0>(*this).Stream(num_bits);
   }
 
   template <StructureFormatter F> void Format(F &fmt) {
@@ -76,8 +75,8 @@ struct PutTDI {
   }
 
   template <class T>
-  static void EmplacePayload(vss::OutputStream auto &os, const BitView<T> &bits,
-                             uint32_t last_tms) {
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             const BitStream<T> &bits, uint32_t last_tms) {
     Payload::Emplace(os, bits);
   }
 
@@ -88,7 +87,7 @@ struct PutTDI {
   struct Out {
     uint32_t num_put;
 
-    template <class T> Out(const BitView<T> &bits, uint32_t last_tms) {}
+    template <class T> Out(const BitStream<T> &bits, uint32_t last_tms) {}
 
     template <StructureFormatter F> void Format(F &fmt) {
       fmt.Value("{}", num_put);
@@ -107,11 +106,11 @@ struct PutTDIGetTDO {
   using Payload = vss::Payload<vss::DependentBits<uint32_t>>;
 
   template <class T>
-  PutTDIGetTDO(const BitView<T> &bits, uint32_t last_tms)
+  PutTDIGetTDO(const BitStream<T> &bits, uint32_t last_tms)
       : num_bits(bits.GetNumBits()), last_tms(last_tms) {}
 
-  BitView<uint32_t> Bits() {
-    return BitView(vss::Get<0>(*this).Stream(), num_bits);
+  BitStream<const uint32_t> Bits() {
+    return vss::Get<0>(*this).Stream(num_bits);
   }
 
   template <StructureFormatter F> void Format(F &fmt) {
@@ -120,8 +119,8 @@ struct PutTDIGetTDO {
   }
 
   template <class T>
-  static void EmplacePayload(vss::OutputStream auto &os, const BitView<T> &bits,
-                             uint32_t last_tms) {
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             const BitStream<T> &bits, uint32_t last_tms) {
     Payload::Emplace(os, bits);
   }
 
@@ -133,11 +132,9 @@ struct PutTDIGetTDO {
     uint32_t num_put;
     using Payload = vss::Payload<vss::DependentBits<uint32_t>>;
 
-    template <class T> Out(const BitView<T> &bits, uint32_t last_tms) {}
+    template <class T> Out(const BitStream<T> &bits, uint32_t last_tms) {}
 
-    BitView<uint32_t> Bits() {
-      return BitView(vss::Get<0>(*this).Stream(), num_put);
-    }
+    BitStream<uint32_t> Bits() { return vss::Get<0>(*this).Stream(num_put); }
 
     template <StructureFormatter F> void Format(F &fmt) {
       fmt.Value("{}", Bits());
@@ -145,7 +142,7 @@ struct PutTDIGetTDO {
 
     template <class T>
     static void EmplacePayload(vss::OutputStream auto &os,
-                               const BitView<T> &bits, uint32_t last_tms) {
+                               const BitStream<T> &bits, uint32_t last_tms) {
       Payload::Emplace(os, bits.GetNumBits());
     }
 
@@ -158,11 +155,11 @@ struct PutTDIGetTDO {
     Out(Out &&) = delete;
   };
 
-  PutTDIGetTDO(const PutTDI &) = delete;
-  PutTDIGetTDO(PutTDI &&) = delete;
+  PutTDIGetTDO(const PutTDIGetTDO &) = delete;
+  PutTDIGetTDO(PutTDIGetTDO &&) = delete;
 };
 
-using JtagAction = Action<PutTMS>;
+using JtagAction = Action<PutTMS, PutTDI, PutTDIGetTDO>;
 
 } // namespace edr
 

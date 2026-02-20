@@ -7,6 +7,9 @@
 #include <cassert>
 #include <cstddef>
 #include <cstdlib>
+#include <deque>
+#include <memory>
+#include <queue>
 #include <utility>
 
 namespace edr {
@@ -23,13 +26,16 @@ public:
     Item(Args &&...args) : data(std::forward<Args>(args)...) {}
   };
 
+  using Allocator = typename std::allocator_traits<
+      typename TAsynchronous::FrameAllocator>::template rebind_alloc<Item>;
+
   class ItemInProgress {
   public:
-    ItemInProgress(TAsynchronous &owner, Item *item)
-        : m_owner(owner), m_item(item) {}
+    ItemInProgress(const Allocator &alloc, Item *item)
+        : m_allocator(alloc), m_item(item) {}
 
     ItemInProgress(ItemInProgress &&from)
-        : m_owner(from.m_owner), m_item(from.m_item),
+        : m_allocator(from.m_allocator), m_item(from.m_item),
           m_resolved(from.m_resolved) {
       from.m_item = nullptr;
     }
@@ -43,8 +49,7 @@ public:
         assert(m_resolved);
 
         m_item->~Item();
-        m_owner.GetFrameAllocator().deallocate(
-            reinterpret_cast<std::byte *>(m_item), sizeof(Item));
+        m_allocator.deallocate(m_item, 1);
       }
     }
 
@@ -70,15 +75,21 @@ public:
     }
 
   private:
-    TAsynchronous &m_owner;
+    Allocator m_allocator;
     Item *m_item;
     bool m_resolved = false;
   };
 
+  using ProgressQueue = std::queue<
+      ItemInProgress,
+      std::deque<ItemInProgress, typename std::allocator_traits<
+                                     typename TAsynchronous::FrameAllocator>::
+                                     template rebind_alloc<ItemInProgress>>>;
+
   class Awaitable : public AwaitableBase<Awaitable, Results...> {
   public:
-    Awaitable(TAsynchronous &owner, Item *item)
-        : m_owner(owner), m_item(item) {}
+    Awaitable(const Allocator &alloc, Item *item)
+        : m_allocator(alloc), m_item(item) {}
 
     ~Awaitable() {
       if (nullptr == m_item)
@@ -91,11 +102,11 @@ public:
 
       assert(g_task_state_result_ready == previous_state);
       m_item->~Item();
-      m_owner.GetFrameAllocator().deallocate(
-          reinterpret_cast<std::byte *>(m_item), sizeof(Item));
+      m_allocator.deallocate(m_item, 1);
     }
 
-    Awaitable(Awaitable &&from) : m_owner(from.m_owner), m_item(from.m_item) {
+    Awaitable(Awaitable &&from)
+        : m_allocator(from.m_allocator), m_item(from.m_item) {
       from.m_item = nullptr;
     }
 
@@ -114,16 +125,17 @@ public:
     operator bool() const { return nullptr != m_item; }
 
   private:
-    TAsynchronous &m_owner;
+    Allocator m_allocator;
     Item *m_item;
   };
 
-  ResolutionQueue(TAsynchronous &owner) : m_owner(owner) {}
+  ResolutionQueue(TAsynchronous &owner)
+      : m_owner(owner), m_allocator(owner.GetFrameAllocator()) {}
 
   template <class... Args> Awaitable Emplace(Args &&...args) {
-    void *new_tail_ptr = m_owner.GetFrameAllocator().allocate(sizeof(Item));
+    void *new_tail_ptr = m_allocator.allocate(1);
     if (nullptr == new_tail_ptr)
-      return Awaitable(m_owner, nullptr);
+      return Awaitable(m_allocator, nullptr);
 
     Item *new_tail = new (new_tail_ptr) Item(std::forward<Args>(args)...);
 
@@ -135,7 +147,7 @@ public:
       m_tail = new_tail;
     }
 
-    return Awaitable(m_owner, new_tail);
+    return Awaitable(m_allocator, new_tail);
   }
 
   bool Empty() { return nullptr == m_head; }
@@ -146,7 +158,7 @@ public:
     if (nullptr == m_head)
       m_tail = nullptr;
 
-    return ItemInProgress(m_owner, old_head);
+    return ItemInProgress(m_allocator, old_head);
   }
 
   T &Front() { return m_head->data; }
@@ -156,6 +168,8 @@ private:
 
   Item *m_head = nullptr;
   Item *m_tail = nullptr;
+
+  Allocator m_allocator;
 };
 
 template <class TAsynchronous, size_t t_num_items_in_bucket, class T,

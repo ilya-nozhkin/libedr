@@ -15,6 +15,9 @@ class BucketArrayMap {
     Bucket *next = nullptr;
   };
 
+  using Allocator =
+      std::allocator_traits<TAllocator>::template rebind_alloc<Bucket>;
+
 public:
   class Iterator {
   public:
@@ -61,7 +64,7 @@ public:
   BucketArrayMap(const TAllocator &allocator = {}) : m_allocator(allocator) {}
 
   BucketArrayMap(BucketArrayMap &&from)
-      : m_allocator(from.m_allocator), m_head(from.m_head) {
+      : m_allocator(std::move(from.m_allocator)), m_head(from.m_head) {
     from.m_head = nullptr;
   }
 
@@ -75,8 +78,7 @@ public:
       m_head = m_head->next;
 
       to_delete->~Bucket();
-      m_allocator.deallocate(reinterpret_cast<std::byte *>(to_delete),
-                             sizeof(Bucket));
+      m_allocator.deallocate(to_delete, 1);
     }
   }
 
@@ -147,7 +149,7 @@ private:
   std::pair<Bucket *, size_t> GetBucketAndOffset(size_t index,
                                                  bool create_if_needed) {
     auto create_new = [this]() -> Bucket * {
-      auto *space = m_allocator.allocate(sizeof(Bucket));
+      auto *space = m_allocator.allocate(1);
       if (nullptr == space)
         return nullptr;
 
@@ -181,7 +183,7 @@ private:
     return {current, index};
   }
 
-  TAllocator m_allocator;
+  Allocator m_allocator;
   Bucket *m_head = nullptr;
 };
 

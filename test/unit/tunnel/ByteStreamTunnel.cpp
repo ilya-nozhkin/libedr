@@ -1,3 +1,4 @@
+#include "test/unit/driver/Mocks.h"
 #include "test/unit/driver/bytestream/Mocks.h"
 
 #include "libedr/driver/Driver.hpp"

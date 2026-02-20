@@ -3,6 +3,7 @@
 
 #include "libedr/driver/UniqueIDs.hpp"
 #include "libedr/driver/bytestream/ByteStreamAction.hpp"
+#include "libedr/driver/jtag/JtagAction.hpp"
 
 namespace edr {
 
@@ -43,7 +44,8 @@ template <class... TPairs> struct ActionByDriverImpl {
 // DEFINE YOUR DRIVER HERE
 // ===========================
 using ActionByDriver =
-    ActionByDriverImpl<Pair<DriverID::ByteStream, ByteStreamAction>>;
+    ActionByDriverImpl<Pair<DriverID::ByteStream, ByteStreamAction>,
+                       Pair<DriverID::Jtag, JtagAction>>;
 // ===========================
 
 using AnyAction = ActionByDriver::AnyAction;

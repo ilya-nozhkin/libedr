@@ -3,8 +3,8 @@
 
 #include "Error.h"
 
-#include "libedr/driver/Logger.hpp"
 #include "libedr/driver/Driver.hpp"
+#include "libedr/driver/Logger.hpp"
 #include <expected>
 #include <format>
 #include <mutex>
@@ -43,6 +43,13 @@ public:
   Context(Context &&) = delete;
   Context &operator=(const Context &) = delete;
   Context &operator=(Context &&) = delete;
+
+  ~Context() {
+    // Deleting entities in reverse order so that dependent ones can access
+    // their dependencies from destructors.
+    for (auto it = m_entities.rbegin(); it != m_entities.rend(); it++)
+      it->reset();
+  }
 
   void AddStdStreams() { m_output.AddStdStreams(); }
 

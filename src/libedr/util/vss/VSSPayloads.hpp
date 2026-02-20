@@ -111,8 +111,8 @@ static_assert(HasPayload<String> && HasPayload<String::Format>);
 template <class T> struct alignas(alignof(T)) DependentBits {
   using Payload = vss::Payload<>;
 
-  BitStream<T> Stream(size_t offset = 0) {
-    return BitStream<T>(reinterpret_cast<T *>(this), offset);
+  BitStream<T> Stream(size_t num_bits, size_t offset = 0) {
+    return BitStream<T>(reinterpret_cast<T *>(this), num_bits, offset);
   }
 
   static void EmplacePayload(vss::OutputStream auto &os,
@@ -121,20 +121,15 @@ template <class T> struct alignas(alignof(T)) DependentBits {
   }
 
   template <class U>
-  static void EmplacePayload(vss::OutputStream auto &os, BitStream<U> &src,
-                             size_t num_bits) {
+  static void EmplacePayload(vss::OutputStream auto &os, BitStream<U> src) {
+    auto num_bits = src.GetNumBits();
+
     auto [_, ptr] = os.Allocate(GetNumBytes(num_bits));
     if (nullptr == ptr)
       return;
 
-    BitStream<T> writer(reinterpret_cast<T *>(ptr));
+    BitStream<T> writer(reinterpret_cast<T *>(ptr), num_bits);
     writer.Write(src, num_bits);
-  }
-
-  template <class U>
-  static void EmplacePayload(vss::OutputStream auto &os,
-                             const BitView<U> &src) {
-    EmplacePayload(os, src.Stream(), src.GetNumBits());
   }
 
   std::optional<size_t> SizeOfPayload(Payload & /*payload*/,
