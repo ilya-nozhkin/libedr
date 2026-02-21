@@ -29,7 +29,7 @@ public:
     return ReadUnsafe<U>(num_bits);
   }
 
-  void Skip(size_t num_bits) {
+  size_t Skip(size_t num_bits) {
     num_bits = std::min(num_bits, m_remaining);
     m_remaining -= num_bits;
 
@@ -38,6 +38,8 @@ public:
     auto num_advances = m_offset / (8 * sizeof(T));
     m_offset %= (8 * sizeof(T));
     m_storage += num_advances;
+
+    return num_bits;
   }
 
   void Crop(size_t num_bits) { m_remaining = std::min(m_remaining, num_bits); }

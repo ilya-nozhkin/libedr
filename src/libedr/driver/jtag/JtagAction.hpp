@@ -134,6 +134,10 @@ struct PutTDIGetTDO {
 
     template <class T> Out(const BitStream<T> &bits, uint32_t last_tms) {}
 
+    BitStream<uint32_t> Bits(size_t num_bits) {
+      return vss::Get<0>(*this).Stream(num_bits);
+    }
+
     BitStream<uint32_t> Bits() { return vss::Get<0>(*this).Stream(num_put); }
 
     template <StructureFormatter F> void Format(F &fmt) {

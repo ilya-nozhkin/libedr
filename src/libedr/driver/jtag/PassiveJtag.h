@@ -24,6 +24,8 @@ public:
   size_t PullTMSTDI(BitStream<BitStorage> &tms_dest,
                     BitStream<BitStorage> &tdi_dest);
 
+  size_t PushTDO(BitStream<const BitStorage> &tdo_source);
+
 private:
   struct QueueItem {
     TxInProgress &tx;
@@ -36,13 +38,12 @@ private:
       size_t>;
 
   using TDOGenerator =
-      Generator<GeneratorArguments<BitStream<const BitStorage>>, size_t>;
+      Generator<GeneratorArguments<BitStream<const BitStorage> *>, size_t>;
 
   using TransactionQueue = ResolutionQueue<PassiveJtag, QueueItem>;
 
   TMSTDIGenerator GenerateTMSTDI();
-
-  TDOGenerator GeneratorTDO();
+  TDOGenerator GenerateTDO();
 
   std::mutex m_mutex;
 
@@ -50,6 +51,7 @@ private:
   TransactionQueue::ProgressQueue m_in_progress;
 
   TMSTDIGenerator m_tms_tdi_generator;
+  TDOGenerator m_tdo_generator;
 };
 
 } // namespace edr
