@@ -8,6 +8,7 @@ namespace edr {
 enum class DriverID : uint32_t {
   ByteStream = 0,
   Jtag = 1000,
+  ExecutionGate = 2000,
 };
 
 constexpr uint32_t ActionOffset(DriverID driver_id) {
@@ -25,6 +26,9 @@ enum class ActionID : uint32_t {
   PutTMS = 1 + ActionOffset(DriverID::Jtag),
   PutTDI = 2 + ActionOffset(DriverID::Jtag),
   PutTDIGetTDO = 3 + ActionOffset(DriverID::Jtag),
+
+  // ExecutionGate
+  SetExecutionGateMode = 1 + ActionOffset(DriverID::ExecutionGate),
 };
 
 enum class CauseID : uint32_t {
@@ -35,6 +39,7 @@ enum class CauseID : uint32_t {
   TooMuchData = 4,
   CauseTerminated = 5,
   CauseErrno = 6,
+  CauseInvalidArgument = 7,
 };
 
 } // namespace edr

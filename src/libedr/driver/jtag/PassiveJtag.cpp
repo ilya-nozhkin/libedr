@@ -6,9 +6,11 @@
 
 namespace edr {
 
-PassiveJtag::PassiveJtag(const DriverContext &ctx, std::string_view name)
-    : Jtag(ctx, name), m_queue(*this), m_in_progress(GetFrameAllocator()),
-      m_tms_tdi_generator(GenerateTMSTDI()), m_tdo_generator(GenerateTDO()) {}
+PassiveJtag::PassiveJtag(const DriverContext &ctx, std::string_view name,
+                         ExecutionGate *exe_gate)
+    : Jtag(ctx, name), m_exe_gate(exe_gate), m_queue(*this),
+      m_in_progress(GetFrameAllocator()), m_tms_tdi_generator(GenerateTMSTDI()),
+      m_tdo_generator(GenerateTDO()) {}
 
 void PassiveJtag::Terminate() {
   std::unique_lock<std::mutex> lock(m_mutex);
@@ -53,6 +55,9 @@ PassiveJtag::Execute(TxInProgress &&tx) {
   auto awaitable = m_queue.Emplace(tx);
 
   lock.unlock();
+
+  if (nullptr != m_exe_gate)
+    m_exe_gate->AddPending();
 
   co_await awaitable;
   co_return tx.Finish();
@@ -234,6 +239,9 @@ PassiveJtag::TDOGenerator PassiveJtag::GenerateTDO() {
 
       item->tx.Done(action);
     }
+
+    if (nullptr != m_exe_gate)
+      m_exe_gate->RemovePending();
 
     item.Resolve();
 

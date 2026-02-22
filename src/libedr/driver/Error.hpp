@@ -149,6 +149,30 @@ struct CauseErrno {
   CauseErrno(CauseErrno &&) = delete;
 };
 
+struct CauseInvalidArgument {
+  static inline constexpr auto g_id = CauseID::CauseInvalidArgument;
+
+  using Payload = vss::Payload<vss::String>;
+
+  std::string_view GetArgumentName() { return vss::Get<0>(*this).View(); }
+
+  template <StructureFormatter F> void Format(F &fmt) {
+    fmt.Value("Invalid value of argument '{}'", GetArgumentName());
+  }
+
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             std::string_view argument_name) {
+    Payload::Emplace(os, argument_name);
+  }
+
+  std::optional<size_t> SizeOfPayload(Payload &payload, size_t max_size) {
+    return payload.Size(max_size);
+  }
+
+  CauseInvalidArgument(const CauseInvalidArgument &) = delete;
+  CauseInvalidArgument(CauseInvalidArgument &&) = delete;
+};
+
 struct CauseIDGetter {
   template <class C> consteval CauseID operator()() { return C::g_id; }
 };
@@ -157,7 +181,8 @@ using ActionOrUnknown = vss::Variant<AnyAction, ActionID>;
 
 using Cause = vss::VariantBase<CauseID, CauseIDGetter, CauseUnsupportedAction,
                                CauseAllocationFailure, CauseStringMessage,
-                               CauseNestedError, CauseTerminated, CauseErrno>;
+                               CauseNestedError, CauseTerminated, CauseErrno,
+                               CauseInvalidArgument>;
 
 struct ActionError final {
   using Payload = vss::Payload<ActionOrUnknown, Cause>;

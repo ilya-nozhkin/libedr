@@ -2,6 +2,7 @@
 #define LIBEDR_DRIVER_JTAG_PASSIVEJTAG_H
 
 #include "libedr/driver/Driver.hpp"
+#include "libedr/driver/execution_gate/ExecutionGate.h"
 #include "libedr/driver/jtag/Jtag.hpp"
 #include "libedr/util/adt/BitStream.hpp"
 #include "libedr/util/asynchronicity/Asynchronicity.hpp"
@@ -13,7 +14,8 @@ class PassiveJtag final : public Jtag {
   using BitStorage = uint8_t;
 
 public:
-  PassiveJtag(const DriverContext &ctx, std::string_view name);
+  PassiveJtag(const DriverContext &ctx, std::string_view name,
+              ExecutionGate *exe_gate = nullptr);
 
   ~PassiveJtag() { Terminate(); }
 
@@ -25,6 +27,8 @@ public:
                     BitStream<BitStorage> &tdi_dest);
 
   size_t PushTDO(BitStream<const BitStorage> &tdo_source);
+
+  ExecutionGate *GetExecutionGate() { return m_exe_gate; }
 
 private:
   struct QueueItem {
@@ -44,6 +48,8 @@ private:
 
   TMSTDIGenerator GenerateTMSTDI();
   TDOGenerator GenerateTDO();
+
+  ExecutionGate *m_exe_gate;
 
   std::mutex m_mutex;
 
