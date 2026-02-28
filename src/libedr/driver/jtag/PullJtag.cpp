@@ -1,4 +1,4 @@
-#include "libedr/driver/jtag/PassiveJtag.h"
+#include "libedr/driver/jtag/PullJtag.h"
 #include "libedr/driver/jtag/JtagAction.hpp"
 #include "libedr/util/adt/BitStream.hpp"
 
@@ -6,12 +6,12 @@
 
 namespace edr {
 
-PassiveJtag::PassiveJtag(const DriverContext &ctx, std::string_view name,
-                         ExecutionGate *exe_gate)
+PullJtag::PullJtag(const DriverContext &ctx, std::string_view name,
+                   ExecutionGate *exe_gate)
     : Jtag(ctx, name), m_exe_gate(exe_gate),
       m_tms_tdi_generator(GenerateTMSTDI()), m_tdo_generator(GenerateTDO()) {}
 
-void PassiveJtag::Terminate() {
+void PullJtag::Terminate() {
   std::unique_lock<std::mutex> lock(m_mutex);
   while (!m_queue.NoScheduled())
     m_queue.StartNextScheduled();
@@ -25,33 +25,33 @@ void PassiveJtag::Terminate() {
   }
 }
 
-void PassiveJtag::Join(const std::coroutine_handle<> &to_complete) {}
+void PullJtag::Join(const std::coroutine_handle<> &to_complete) {}
 
-size_t PassiveJtag::PullTMSTDI(BitStream<BitStorage> &tms_dest,
-                               BitStream<BitStorage> &tdi_dest) {
+size_t PullJtag::PullTMSTDI(BitStream<BitStorage> &tms_dest,
+                            BitStream<BitStorage> &tdi_dest) {
   return m_tms_tdi_generator(&tms_dest, &tdi_dest);
 }
 
-size_t PassiveJtag::PushTDO(BitStream<const BitStorage> &tdo_source) {
+size_t PullJtag::PushTDO(BitStream<const BitStorage> &tdo_source) {
   return m_tdo_generator(&tdo_source);
 }
 
-PassiveJtag::CheckedTask<PassiveJtag::Status>
-PassiveJtag::Execute(TxInProgress &&tx) {
+PullJtag::CheckedTask<PullJtag::Status> PullJtag::Execute(TxInProgress &&tx) {
   TransactionQueue::Item item(tx);
 
   std::unique_lock<std::mutex> lock(m_mutex);
   auto awaitable = m_queue.Enqueue(item);
-  lock.unlock();
 
   if (nullptr != m_exe_gate)
     m_exe_gate->AddPending();
+
+  lock.unlock();
 
   co_await awaitable;
   co_return tx.Finish();
 }
 
-PassiveJtag::TMSTDIGenerator PassiveJtag::GenerateTMSTDI() {
+PullJtag::TMSTDIGenerator PullJtag::GenerateTMSTDI() {
   static constexpr uint64_t g_zeros = 0;
   static constexpr uint64_t g_ones = 0xFFFFFFFFFFFFFFFFllu;
 
@@ -150,7 +150,7 @@ PassiveJtag::TMSTDIGenerator PassiveJtag::GenerateTMSTDI() {
   }
 }
 
-PassiveJtag::TDOGenerator PassiveJtag::GenerateTDO() {
+PullJtag::TDOGenerator PullJtag::GenerateTDO() {
   BitStream<const BitStorage> *tdo_source = nullptr;
 
   size_t consumed = 0;

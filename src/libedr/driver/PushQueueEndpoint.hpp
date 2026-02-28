@@ -1,5 +1,5 @@
-#ifndef LIBEDR_DRIVER_ACTIVEQUEUEENDPOINT_HPP
-#define LIBEDR_DRIVER_ACTIVEQUEUEENDPOINT_HPP
+#ifndef LIBEDR_DRIVER_PUSHQUEUEENDPOINT_HPP
+#define LIBEDR_DRIVER_PUSHQUEUEENDPOINT_HPP
 
 #include "libedr/util/asynchronicity/ResolutionQueue.hpp"
 
@@ -8,14 +8,14 @@
 
 namespace edr {
 
-template <class TItem> class ActiveQueueEndpoint {
+template <class TItem> class PushQueueEndpoint {
 public:
   using TransactionQueue = ResolutionQueue<TItem>;
   using Item = TransactionQueue::Item;
 
   class Enqueuer {
   public:
-    Enqueuer(ActiveQueueEndpoint<TItem> &owner)
+    Enqueuer(PushQueueEndpoint<TItem> &owner)
         : m_owner(owner), m_lock(owner.m_mutex) {}
 
     auto Enqueue(Item &item) {
@@ -28,7 +28,7 @@ public:
     }
 
   private:
-    ActiveQueueEndpoint<TItem> &m_owner;
+    PushQueueEndpoint<TItem> &m_owner;
     std::unique_lock<std::mutex> m_lock;
   };
 

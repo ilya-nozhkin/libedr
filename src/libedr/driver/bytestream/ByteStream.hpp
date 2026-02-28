@@ -1,7 +1,7 @@
 #ifndef LIBEDR_DRIVER_BYTESTREAM_BYTESTREAM_HPP
 #define LIBEDR_DRIVER_BYTESTREAM_BYTESTREAM_HPP
 
-#include "libedr/driver/ActiveQueueEndpoint.hpp"
+#include "libedr/driver/PushQueueEndpoint.hpp"
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/Error.hpp"
 #include "libedr/driver/UniqueIDs.hpp"
@@ -60,7 +60,7 @@ private:
     TxInProgress &tx;
   };
 
-  using Endpoint = ActiveQueueEndpoint<PendingTransaction>;
+  using Endpoint = PushQueueEndpoint<PendingTransaction>;
 
   void DoReads(TxInProgress &tx) {
     for (auto act : tx.Incomplete()) {

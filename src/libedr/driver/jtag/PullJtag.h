@@ -1,5 +1,5 @@
-#ifndef LIBEDR_DRIVER_JTAG_PASSIVEJTAG_H
-#define LIBEDR_DRIVER_JTAG_PASSIVEJTAG_H
+#ifndef LIBEDR_DRIVER_JTAG_PULLJTAG_H
+#define LIBEDR_DRIVER_JTAG_PULLJTAG_H
 
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/execution_gate/ExecutionGate.h"
@@ -10,14 +10,14 @@
 
 namespace edr {
 
-class PassiveJtag final : public Jtag {
+class PullJtag final : public Jtag {
   using BitStorage = uint8_t;
 
 public:
-  PassiveJtag(const DriverContext &ctx, std::string_view name,
-              ExecutionGate *exe_gate = nullptr);
+  PullJtag(const DriverContext &ctx, std::string_view name,
+           ExecutionGate *exe_gate = nullptr);
 
-  ~PassiveJtag() { Terminate(); }
+  ~PullJtag() { Terminate(); }
 
   void Terminate() override;
 

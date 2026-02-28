@@ -1,3 +1,3 @@
 edr_tests(
-    ${CMAKE_CURRENT_LIST_DIR}/PassiveJtag.cpp
+    ${CMAKE_CURRENT_LIST_DIR}/PullJtag.cpp
 )

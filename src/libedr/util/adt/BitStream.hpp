@@ -122,15 +122,18 @@ public:
   explicit BitStream(T *data, size_t num_bits, size_t offset = 0)
       : BitStreamBase<T>(data, num_bits, offset) {}
 
-  template <std::unsigned_integral U> void Write(U value, size_t num_bits) {
+  template <std::unsigned_integral U> size_t Write(U value, size_t num_bits) {
     assert(num_bits <= 8 * sizeof(U));
 
     num_bits = std::min(num_bits, this->m_remaining);
-    return WriteUnsafe(value, num_bits);
+    WriteUnsafe(value, num_bits);
+
+    return num_bits;
   }
 
-  template <class U> void Write(BitStream<U> &src, size_t num_bits) {
+  template <class U> size_t Write(BitStream<U> &src, size_t num_bits) {
     num_bits = std::min(std::min(num_bits, this->m_remaining), src.m_remaining);
+    size_t written = num_bits;
 
     using Vessel = std::conditional_t<sizeof(T) >= sizeof(U), T, U>;
 
@@ -141,6 +144,8 @@ public:
 
       num_bits -= this_time;
     }
+
+    return written;
   }
 
 private:

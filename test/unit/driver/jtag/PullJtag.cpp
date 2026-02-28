@@ -2,18 +2,18 @@
 #include "test/unit/driver/Mocks.h"
 
 #include "libedr/driver/Driver.hpp"
-#include "libedr/driver/jtag/PassiveJtag.h"
+#include "libedr/driver/jtag/PullJtag.h"
 
 #include <cstdint>
 #include <gtest/gtest.h>
 
 using namespace edr;
 
-TEST(PassiveJtag, generates_tms_tdi) {
+TEST(PullJtag, generates_tms_tdi) {
   MockLoggerOutput logger_output(LogLevel::ERROR);
   Logger logger(logger_output, LogLevel::TRACE);
   DriverContext ctx(logger);
-  PassiveJtag jtag(ctx, "JTAG");
+  PullJtag jtag(ctx, "JTAG");
 
   auto tx = jtag.Initiate("tx");
   tx.Add<PutTMS>(BitStream(0x123u, 12));
@@ -47,11 +47,11 @@ TEST(PassiveJtag, generates_tms_tdi) {
   EXPECT_EQ(tdi2, (0x54321ull << 28) | (0x12345678FFFull >> 13));
 }
 
-TEST(PassiveJtag, accepts_tdo) {
+TEST(PullJtag, accepts_tdo) {
   MockLoggerOutput logger_output(LogLevel::ERROR);
   Logger logger(logger_output, LogLevel::TRACE);
   DriverContext ctx(logger);
-  PassiveJtag jtag(ctx, "JTAG");
+  PullJtag jtag(ctx, "JTAG");
 
   auto tx = jtag.Initiate("tx");
   auto put_tms1 = tx.Add<PutTMS>(BitStream(0x123u, 12));

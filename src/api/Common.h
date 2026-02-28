@@ -138,7 +138,7 @@ public:                                                                        \
                                                                                \
   bool IsValid() { return nullptr != m_driver; }                               \
                                                                                \
-private:                                                                       \
+protected:                                                                     \
   std::shared_ptr<Context> m_context_sp;                                       \
   DRIVER_LIB_NAME *m_driver = nullptr;
 
