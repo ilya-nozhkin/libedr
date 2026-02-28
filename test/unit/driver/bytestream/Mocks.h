@@ -3,7 +3,7 @@
 
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/bytestream/ByteStream.hpp"
-#include "libedr/util/asynchronicity/AsynchronousPrimitives.hpp"
+#include "libedr/util/asynchronicity/ResolutionQueue.hpp"
 
 #include <coroutine>
 #include <cstddef>
@@ -13,18 +13,22 @@ namespace edr {
 
 class MockPipe : public Asynchronous<> {
 public:
-  MockPipe() : m_queue(*this) {}
+  MockPipe() {}
 
   void Write(std::span<const std::byte> bytes) {
     m_data.insert(m_data.end(), bytes.begin(), bytes.end());
 
-    while (!m_queue.Empty() && m_data.size() >= m_queue.Front())
-      m_queue.Pop().Resolve();
+    while (!m_queue.NoScheduled() &&
+           m_data.size() >= m_queue.GetNextScheduled().Data()) {
+      m_queue.StartNextScheduled();
+      m_queue.PrepareToResolve().Resolve();
+    }
   }
 
   Task<> Read(std::span<std::byte> dest) {
     if (m_data.size() < dest.size()) {
-      auto awaitable = m_queue.Emplace(dest.size());
+      ResolutionQueue<size_t>::Item item(dest.size());
+      auto awaitable = m_queue.Enqueue(item);
       assert(awaitable);
       co_await awaitable;
     }
@@ -35,7 +39,7 @@ public:
 
 private:
   std::vector<std::byte> m_data;
-  ResolutionQueue<MockPipe, size_t> m_queue;
+  ResolutionQueue<size_t> m_queue;
 };
 
 class MockPipeByteStream final : public ByteStream {

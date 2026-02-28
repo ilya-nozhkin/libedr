@@ -1,39 +1,27 @@
 #include "libedr/driver/jtag/PassiveJtag.h"
-#include "libedr/driver/Error.hpp"
 #include "libedr/driver/jtag/JtagAction.hpp"
 #include "libedr/util/adt/BitStream.hpp"
+
 #include <mutex>
 
 namespace edr {
 
 PassiveJtag::PassiveJtag(const DriverContext &ctx, std::string_view name,
                          ExecutionGate *exe_gate)
-    : Jtag(ctx, name), m_exe_gate(exe_gate), m_queue(*this),
-      m_in_progress(GetFrameAllocator()), m_tms_tdi_generator(GenerateTMSTDI()),
-      m_tdo_generator(GenerateTDO()) {}
+    : Jtag(ctx, name), m_exe_gate(exe_gate),
+      m_tms_tdi_generator(GenerateTMSTDI()), m_tdo_generator(GenerateTDO()) {}
 
 void PassiveJtag::Terminate() {
   std::unique_lock<std::mutex> lock(m_mutex);
-  while (!m_in_progress.empty() || !m_queue.Empty()) {
-    auto fail = [&](auto &item) {
-      item->tx.template Fail<CauseTerminated>(m_name);
+  while (!m_queue.NoScheduled())
+    m_queue.StartNextScheduled();
 
-      lock.unlock();
-      item.Resolve();
-      lock.lock();
-    };
+  while (!m_queue.NoInProgress()) {
+    auto item = m_queue.PrepareToResolve();
 
-    if (!m_in_progress.empty()) {
-      auto item = std::move(m_in_progress.front());
-      m_in_progress.pop();
-
-      fail(item);
-    }
-
-    if (!m_queue.Empty()) {
-      auto item = m_queue.Pop();
-      fail(item);
-    }
+    lock.unlock();
+    item.Resolve();
+    lock.lock();
   }
 }
 
@@ -50,10 +38,10 @@ size_t PassiveJtag::PushTDO(BitStream<const BitStorage> &tdo_source) {
 
 PassiveJtag::CheckedTask<PassiveJtag::Status>
 PassiveJtag::Execute(TxInProgress &&tx) {
+  TransactionQueue::Item item(tx);
+
   std::unique_lock<std::mutex> lock(m_mutex);
-
-  auto awaitable = m_queue.Emplace(tx);
-
+  auto awaitable = m_queue.Enqueue(item);
   lock.unlock();
 
   if (nullptr != m_exe_gate)
@@ -105,7 +93,7 @@ PassiveJtag::TMSTDIGenerator PassiveJtag::GenerateTMSTDI() {
   while (true) {
     lock.lock();
 
-    if (m_queue.Empty()) {
+    if (m_queue.NoScheduled()) {
       lock.unlock();
 
       std::tie(tms_dest, tdi_dest) = co_yield accumulated;
@@ -114,7 +102,7 @@ PassiveJtag::TMSTDIGenerator PassiveJtag::GenerateTMSTDI() {
       continue;
     }
 
-    auto &item = m_in_progress.emplace(m_queue.Pop());
+    auto &item = m_queue.StartNextScheduled();
     lock.unlock();
 
     for (auto action : item->tx.Incomplete()) {
@@ -175,7 +163,7 @@ PassiveJtag::TDOGenerator PassiveJtag::GenerateTDO() {
   std::unique_lock lock(m_mutex);
 
   while (true) {
-    if (m_in_progress.empty()) {
+    if (m_queue.NoInProgress()) {
       lock.unlock();
 
       tdo_source = co_yield consumed;
@@ -185,8 +173,7 @@ PassiveJtag::TDOGenerator PassiveJtag::GenerateTDO() {
       continue;
     }
 
-    auto &item = m_in_progress.front();
-    lock.unlock();
+    auto &item = m_queue.GetCurrentInProgress();
 
     for (auto action : item->tx.Incomplete()) {
       auto [put_tms, put_tms_out] = action.As<PutTMS>();
@@ -209,8 +196,12 @@ PassiveJtag::TDOGenerator PassiveJtag::GenerateTDO() {
           consumed += this_time;
 
           if (num_bits != 0) {
+            lock.unlock();
+
             tdo_source = co_yield consumed;
             refresh();
+
+            lock.lock();
           }
         }
 
@@ -232,8 +223,12 @@ PassiveJtag::TDOGenerator PassiveJtag::GenerateTDO() {
         consumed += this_time;
 
         if (0 != tdo_dest.GetNumBits()) {
+          lock.unlock();
+
           tdo_source = co_yield consumed;
           refresh();
+
+          lock.lock();
         }
       }
 
@@ -243,10 +238,12 @@ PassiveJtag::TDOGenerator PassiveJtag::GenerateTDO() {
     if (nullptr != m_exe_gate)
       m_exe_gate->RemovePending();
 
-    item.Resolve();
+    auto resolvable = m_queue.PrepareToResolve();
+    lock.unlock();
+
+    resolvable.Resolve();
 
     lock.lock();
-    m_in_progress.pop();
   }
 }
 

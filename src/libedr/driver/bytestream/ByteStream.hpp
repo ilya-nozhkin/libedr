@@ -29,7 +29,7 @@ class DeferredByteStream final : public ByteStream {
 public:
   DeferredByteStream(const DriverContext &ctx, std::string_view name,
                      BlockingByteStream &stream)
-      : ByteStream(ctx, name), m_stream(stream), m_endpoint(*this),
+      : ByteStream(ctx, name), m_stream(stream),
         m_write_buffer(ctx.TransactionBufferResource()) {}
 
   ~DeferredByteStream() override { Terminate(); }
@@ -59,6 +59,8 @@ private:
   struct PendingTransaction {
     TxInProgress &tx;
   };
+
+  using Endpoint = ActiveQueueEndpoint<PendingTransaction>;
 
   void DoReads(TxInProgress &tx) {
     for (auto act : tx.Incomplete()) {
@@ -116,7 +118,8 @@ private:
     if (incomplete.begin() == incomplete.end())
       co_return tx.Finish();
 
-    auto enqueued_reads = enqueuer.Enqueue(tx);
+    Endpoint::Item item(tx);
+    auto enqueued_reads = enqueuer.Enqueue(item);
     co_await enqueued_reads;
 
     co_return tx.Finish();
@@ -215,7 +218,7 @@ private:
   BlockingByteStream &m_stream;
   std::atomic_bool m_stream_terminated = false;
 
-  ActiveQueueEndpoint<DeferredByteStream, PendingTransaction> m_endpoint;
+  Endpoint m_endpoint;
   TBuffer m_write_buffer;
 };
 

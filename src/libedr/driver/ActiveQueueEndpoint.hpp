@@ -1,24 +1,25 @@
 #ifndef LIBEDR_DRIVER_ACTIVEQUEUEENDPOINT_HPP
 #define LIBEDR_DRIVER_ACTIVEQUEUEENDPOINT_HPP
 
-#include "libedr/util/asynchronicity/AsynchronousPrimitives.hpp"
+#include "libedr/util/asynchronicity/ResolutionQueue.hpp"
 
 #include <condition_variable>
 #include <mutex>
 
 namespace edr {
 
-template <class TAsynchronous, class TItem> class ActiveQueueEndpoint {
+template <class TItem> class ActiveQueueEndpoint {
 public:
-  ActiveQueueEndpoint(TAsynchronous &owner) : m_queue(owner) {}
+  using TransactionQueue = ResolutionQueue<TItem>;
+  using Item = TransactionQueue::Item;
 
   class Enqueuer {
   public:
-    Enqueuer(ActiveQueueEndpoint<TAsynchronous, TItem> &owner)
+    Enqueuer(ActiveQueueEndpoint<TItem> &owner)
         : m_owner(owner), m_lock(owner.m_mutex) {}
 
-    template <class... Args> auto Enqueue(Args &&...args) {
-      auto pending_task = m_owner.m_queue.Emplace(std::forward<Args>(args)...);
+    auto Enqueue(Item &item) {
+      auto pending_task = m_owner.m_queue.Enqueue(item);
       m_lock.unlock();
 
       m_owner.m_queue_updated.notify_all();
@@ -27,7 +28,7 @@ public:
     }
 
   private:
-    ActiveQueueEndpoint<TAsynchronous, TItem> &m_owner;
+    ActiveQueueEndpoint<TItem> &m_owner;
     std::unique_lock<std::mutex> m_lock;
   };
 
@@ -37,10 +38,10 @@ public:
     bool pending_notification = false;
 
     std::unique_lock<std::mutex> lock(m_mutex);
-    if (wait_if_empty && m_queue.Empty())
+    if (wait_if_empty && m_queue.NoScheduled())
       m_queue_updated.wait(lock);
 
-    while (!m_queue.Empty() || m_transaction_in_progress) {
+    while (!m_queue.NoScheduled() || m_transaction_in_progress) {
       if (m_transaction_in_progress) {
         m_queue_updated.wait(lock);
         continue;
@@ -78,7 +79,7 @@ public:
 
     std::unique_lock<std::mutex> lock(m_mutex);
     while (!to_complete.done()) {
-      if (m_queue.Empty() || m_transaction_in_progress) {
+      if (m_queue.NoScheduled() || m_transaction_in_progress) {
         m_queue_updated.wait(lock);
         continue;
       }
@@ -96,7 +97,8 @@ private:
   template <class F>
   void ServeFront(std::unique_lock<std::mutex> &lock,
                   bool &pending_notification, F &&handle_transaction) {
-    auto current = m_queue.Pop();
+    m_queue.StartNextScheduled();
+    auto current = m_queue.PrepareToResolve();
     m_transaction_in_progress = true;
 
     lock.unlock();
@@ -106,7 +108,7 @@ private:
       pending_notification = false;
     }
 
-    handle_transaction(*current);
+    handle_transaction(current.Data());
     current.Resolve();
 
     lock.lock();
@@ -116,7 +118,7 @@ private:
 
   std::mutex m_mutex;
 
-  ResolutionQueue<TAsynchronous, TItem> m_queue;
+  TransactionQueue m_queue;
 
   std::condition_variable m_queue_updated;
   bool m_transaction_in_progress = false;

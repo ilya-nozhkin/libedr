@@ -6,7 +6,7 @@
 #include "libedr/driver/jtag/Jtag.hpp"
 #include "libedr/util/adt/BitStream.hpp"
 #include "libedr/util/asynchronicity/Asynchronicity.hpp"
-#include "libedr/util/asynchronicity/AsynchronousPrimitives.hpp"
+#include "libedr/util/asynchronicity/ResolutionQueue.hpp"
 
 namespace edr {
 
@@ -44,7 +44,7 @@ private:
   using TDOGenerator =
       Generator<GeneratorArguments<BitStream<const BitStorage> *>, size_t>;
 
-  using TransactionQueue = ResolutionQueue<PassiveJtag, QueueItem>;
+  using TransactionQueue = ResolutionQueue<QueueItem>;
 
   TMSTDIGenerator GenerateTMSTDI();
   TDOGenerator GenerateTDO();
@@ -54,7 +54,6 @@ private:
   std::mutex m_mutex;
 
   TransactionQueue m_queue;
-  TransactionQueue::ProgressQueue m_in_progress;
 
   TMSTDIGenerator m_tms_tdi_generator;
   TDOGenerator m_tdo_generator;
