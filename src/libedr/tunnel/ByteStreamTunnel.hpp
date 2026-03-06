@@ -12,6 +12,7 @@
 #include "libedr/util/asynchronicity/Asynchronicity.hpp"
 #include "libedr/util/asynchronicity/ResolutionMap.hpp"
 #include "libedr/util/memory/FreeListAllocator.hpp"
+#include "libedr/util/miscellaneous/ScopeGuard.hpp"
 #include "libedr/util/miscellaneous/Spinlock.hpp"
 
 #include <limits>
@@ -71,6 +72,10 @@ public:
           m_driver_index(driver_index) {}
 
     ~TunnelledDriver() override { Terminate(); }
+
+    bool Serve(bool wait_if_empty) override {
+      return m_tunnel.Serve(wait_if_empty);
+    }
 
     void Join(const std::coroutine_handle<> &to_complete) override {
       m_tunnel.Join(to_complete);
@@ -169,6 +174,8 @@ public:
         m_pending_transactions(*this) {}
 
   ~ByteStreamTunnel() { Terminate(); }
+
+  bool IsAlive() { return m_is_alive.load(); }
 
   bool RegisterDriver(DriverBase &driver) {
     auto *emplaced = m_my_drivers.Emplace(m_next_my_driver_index, driver);
@@ -288,6 +295,8 @@ public:
     return nullptr;
   }
 
+  bool Serve(bool wait_if_empty) { return m_bstream.Serve(wait_if_empty); }
+
   void Join(const std::coroutine_handle<> &to_complete) {
     m_bstream.Join(to_complete);
   }
@@ -347,6 +356,9 @@ private:
   };
 
   Task<> EventLoop() {
+    m_is_alive = true;
+    auto guard = MakeScopeGuard([this]() { m_is_alive = false; });
+
     auto status = m_bstream.MakeEmptyStatus();
     while (true) {
       auto total_size = sizeof(PacketID) + sizeof(RequestHeader);
@@ -649,6 +661,8 @@ private:
   TransactionKey m_next_key = 0;
 
   PendingTransactionsMap m_pending_transactions;
+
+  std::atomic_bool m_is_alive = false;
 };
 
 } // namespace edr

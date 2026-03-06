@@ -1,9 +1,9 @@
 #ifndef LIBEDR_DRIVER_BYTESTREAM_BYTESTREAM_HPP
 #define LIBEDR_DRIVER_BYTESTREAM_BYTESTREAM_HPP
 
-#include "libedr/driver/PushQueueEndpoint.hpp"
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/Error.hpp"
+#include "libedr/driver/PushQueueEndpoint.hpp"
 #include "libedr/driver/UniqueIDs.hpp"
 #include "libedr/driver/bytestream/ByteStreamAction.hpp"
 
@@ -34,19 +34,16 @@ public:
 
   ~DeferredByteStream() override { Terminate(); }
 
-  bool Serve(bool wait_if_empty) {
+  void Terminate() override {
+    m_endpoint.Terminate(
+        [this]() { m_stream.Terminate(); },
+        [this](PendingTransaction &pending) { DoReads(pending.tx); });
+  }
+
+  bool Serve(bool wait_if_empty) override {
     return m_endpoint.Serve(wait_if_empty, [this](PendingTransaction &pending) {
       DoReads(pending.tx);
     });
-  }
-
-  void Terminate() override {
-    bool already_terminated = m_stream_terminated.exchange(true);
-    if (!already_terminated)
-      m_stream.Terminate();
-
-    m_endpoint.Terminate(
-        [this](PendingTransaction &pending) { DoReads(pending.tx); });
   }
 
   void Join(const std::coroutine_handle<> &to_complete) override {
@@ -100,7 +97,11 @@ private:
         first_write = act;
     }
 
-    auto enqueuer = m_endpoint.LockForEnqueue();
+    auto maybe_enqueuer = m_endpoint.LockForEnqueue();
+    if (!maybe_enqueuer) {
+      tx.Fail<CauseTerminated>(m_name);
+      co_return tx.Finish();
+    }
 
     if (first_write.has_value()) {
       auto [first_wact, _] = first_write->As<WriteBytes>();
@@ -119,7 +120,7 @@ private:
       co_return tx.Finish();
 
     Endpoint::Item item(tx);
-    auto enqueued_reads = enqueuer.Enqueue(item);
+    auto enqueued_reads = maybe_enqueuer->Enqueue(item);
     co_await enqueued_reads;
 
     co_return tx.Finish();
@@ -216,7 +217,6 @@ private:
   }
 
   BlockingByteStream &m_stream;
-  std::atomic_bool m_stream_terminated = false;
 
   Endpoint m_endpoint;
   TBuffer m_write_buffer;

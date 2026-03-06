@@ -52,19 +52,19 @@
 
 %shared_ptr(Context)
 
-%pybuffer_binary(const std::byte *src, size_t size)
-%pybuffer_mutable_binary(std::byte *dest, size_t size)
+%pybuffer_binary(const std::byte *src, uint32_t size)
+%pybuffer_mutable_binary(std::byte *dest, uint32_t size)
 
 %mutable_bits(std::byte *dest_bits);
-%check_bit_storage_size(size_t max_num_bits, size2)
+%check_bit_storage_size(uint32_t max_num_bits, size2)
 
 %mutable_bits(std::byte *tms_dest);
-%check_bit_storage_size(size_t max_tms_bits, size2)
+%check_bit_storage_size(uint32_t max_tms_bits, size2)
 
 %mutable_bits(std::byte *tdi_dest);
-%check_bit_storage_size(size_t max_tdi_bits, size4)
+%check_bit_storage_size(uint32_t max_tdi_bits, size4)
 
 %const_bits(const std::byte *src_bits);
-%check_bit_storage_size(size_t num_bits, size2)
+%check_bit_storage_size(uint32_t num_bits, size2)
 
 @EDR_API_SWIG_INCLUDES@

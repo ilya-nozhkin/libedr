@@ -1,10 +1,13 @@
 set(EDR_API_HEADERS
   ${CMAKE_CURRENT_LIST_DIR}/Error.h
   ${CMAKE_CURRENT_LIST_DIR}/Context.h
+  ${CMAKE_CURRENT_LIST_DIR}/DriverBase.h
   ${CMAKE_CURRENT_LIST_DIR}/Common.h
   ${CMAKE_CURRENT_LIST_DIR}/ByteStream.h
   ${CMAKE_CURRENT_LIST_DIR}/ExecutionGate.h
   ${CMAKE_CURRENT_LIST_DIR}/Jtag.h
+  ${CMAKE_CURRENT_LIST_DIR}/TunnelCommon.h
+  ${CMAKE_CURRENT_LIST_DIR}/ByteStreamTunnel.h
 )
 
 set(EDR_API_SOURCES

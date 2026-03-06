@@ -50,6 +50,8 @@ public:
 
   void FailAfter(size_t num_actions) { m_actions_left = num_actions; }
 
+  bool Serve(bool /*wait_if_empty*/) override { return false; }
+
   void Join(const std::coroutine_handle<> &to_complete) override {}
 
   void Terminate() override {}

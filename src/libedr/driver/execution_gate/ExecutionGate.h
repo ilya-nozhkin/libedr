@@ -9,7 +9,7 @@
 
 namespace edr {
 
-class ExecutionGate final
+class ExecutionGate
     : public Driver<DriverID::ExecutionGate, ExecutionGateAction> {
 public:
   ExecutionGate(const DriverContext &ctx, std::string_view name);
@@ -18,7 +18,11 @@ public:
 
   void Terminate() override;
 
+  bool Serve(bool /*wait_if_empty*/) override { return false; }
+
   void Join(const std::coroutine_handle<> &to_complete) override;
+
+  ExecutionGateMode SetMode(ExecutionGateMode mode);
 
   void StallIfNeeded(bool target_is_idle);
 

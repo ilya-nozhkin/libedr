@@ -15,8 +15,9 @@ public:
 
   class Enqueuer {
   public:
-    Enqueuer(PushQueueEndpoint<TItem> &owner)
-        : m_owner(owner), m_lock(owner.m_mutex) {}
+    Enqueuer(PushQueueEndpoint<TItem> &owner,
+             std::unique_lock<std::mutex> &&lock)
+        : m_owner(owner), m_lock(std::move(lock)) {}
 
     auto Enqueue(Item &item) {
       auto pending_task = m_owner.m_queue.Enqueue(item);
@@ -32,16 +33,22 @@ public:
     std::unique_lock<std::mutex> m_lock;
   };
 
-  Enqueuer LockForEnqueue() { return Enqueuer(*this); }
+  std::optional<Enqueuer> LockForEnqueue() {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    if (!m_is_alive)
+      return {};
+
+    return Enqueuer(*this, std::move(lock));
+  }
 
   template <class F> bool Serve(bool wait_if_empty, F &&handle_transaction) {
     bool pending_notification = false;
 
     std::unique_lock<std::mutex> lock(m_mutex);
-    if (wait_if_empty && m_queue.NoScheduled())
+    if (wait_if_empty && m_is_alive && m_queue.NoScheduled())
       m_queue_updated.wait(lock);
 
-    while (!m_queue.NoScheduled() || m_transaction_in_progress) {
+    while (!m_queue.NoScheduled()) {
       if (m_transaction_in_progress) {
         m_queue_updated.wait(lock);
         continue;
@@ -51,22 +58,30 @@ public:
                  std::forward<F>(handle_transaction));
     }
 
+    bool was_alive = m_is_alive;
     lock.unlock();
+
     if (pending_notification)
       m_queue_updated.notify_all();
 
-    return m_is_alive;
+    return was_alive;
   }
 
-  template <class F> void Terminate(F &&handle_transaction) {
+  template <class F, class G>
+  void Terminate(F &&terminate_underlying, G &&handle_transaction) {
+    bool was_alive = false;
     {
       std::unique_lock<std::mutex> lock(m_mutex);
+      was_alive = m_is_alive;
       m_is_alive = false;
     }
 
+    if (was_alive)
+      terminate_underlying();
+
     m_queue_updated.notify_all();
 
-    Serve(false, std::forward<F>(handle_transaction));
+    Serve(false, std::forward<G>(handle_transaction));
   }
 
   template <class F>

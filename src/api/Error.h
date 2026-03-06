@@ -26,6 +26,10 @@ public:
   }
 #endif
 
+  bool Success() { return m_error.Success() ? 1 : 0; }
+
+  bool Fail() { return Success() ? 0 : 1; }
+
   const char *Message() {
     if (!m_string.empty())
       return m_string.c_str();

@@ -3,7 +3,7 @@
 
 #include "Common.h"
 #include "Context.h"
-#include "Error.h"
+#include "DriverBase.h"
 
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/execution_gate/ExecutionGate.h"
@@ -18,7 +18,7 @@ enum class ExecutionGateMode : uint32_t {
 };
 
 class ExecutionGateTransaction {
-  TRANSACTION_BODY(ExecutionGate, edr::ExecutionGate);
+  TRANSACTION_BODY(ExecutionGate);
 
 public:
   void SetMode(ExecutionGateMode mode) {
@@ -41,13 +41,28 @@ public:
   }
 };
 
-class ExecutionGate {
-  DRIVER_BODY(ExecutionGate, edr::ExecutionGate);
+class ExecutionGate : public DriverBase {
+  DRIVER_BODY(ExecutionGate);
 
 public:
   ExecutionGate(const std::shared_ptr<Context> &context_sp, const char *name)
       : ExecutionGate(context_sp, &context_sp->MakeWith<edr::ExecutionGate>(
                                       context_sp->PersistFormat("{}", name))) {}
+
+  ExecutionGateMode SetMode(ExecutionGateMode mode) {
+    if (nullptr == m_driver)
+      return ExecutionGateMode::Terminated;
+
+    return static_cast<ExecutionGateMode>(
+        Self()->SetMode(static_cast<edr::ExecutionGateMode>(mode)));
+  }
+
+  void StallIfNeeded(uint8_t target_is_idle) {
+    if (nullptr == m_driver)
+      return;
+
+    Self()->StallIfNeeded(target_is_idle != 0);
+  }
 };
 
 #endif

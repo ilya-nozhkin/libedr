@@ -23,6 +23,20 @@ void ExecutionGate::Join(const std::coroutine_handle<> &to_complete) {
     std::this_thread::yield();
 }
 
+ExecutionGateMode ExecutionGate::SetMode(ExecutionGateMode mode) {
+  {
+    std::scoped_lock<std::mutex> lock(m_mutex);
+
+    if (m_mode == ExecutionGateMode::Terminated)
+      return m_mode;
+
+    m_mode = mode;
+  }
+
+  m_on_new_request.notify_all();
+  return m_mode;
+}
+
 void ExecutionGate::StallIfNeeded(bool target_is_idle) {
   std::unique_lock<std::mutex> lock(m_mutex);
 

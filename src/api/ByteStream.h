@@ -3,6 +3,7 @@
 
 #include "Common.h"
 #include "Context.h"
+#include "DriverBase.h"
 #include "Error.h"
 
 #include "libedr/driver/Driver.hpp"
@@ -13,24 +14,24 @@
 #include <memory>
 
 class ByteStreamTransaction {
-  TRANSACTION_BODY(ByteStream, edr::ByteStream);
+  TRANSACTION_BODY(ByteStream);
 
 public:
-  void WriteBytes(const std::byte *src, size_t size) {
+  void WriteBytes(const std::byte *src, uint32_t size) {
     if (!m_builder)
       return;
 
     m_builder->Add<edr::WriteBytes>(std::span<const std::byte>(src, size));
   }
 
-  void ReadBytes(size_t num_bytes) {
+  void ReadBytes(uint32_t num_bytes) {
     if (!m_builder)
       return;
 
     m_builder->Add<edr::ReadBytes>(num_bytes);
   }
 
-  size_t GetNumWrittenBytes() {
+  uint32_t GetNumWrittenBytes() {
     if (!InitCheckIterator())
       return 0;
 
@@ -41,7 +42,7 @@ public:
     return out->num_written;
   }
 
-  size_t GetReadBytes(std::byte *dest, size_t size) {
+  uint32_t GetReadBytes(std::byte *dest, uint32_t size) {
     if (!InitCheckIterator())
       return 0;
 
@@ -50,15 +51,15 @@ public:
       return 0;
 
     auto span = out->Span();
-    auto to_copy = std::min<size_t>(size, span.size());
+    auto to_copy = std::min<uint32_t>(size, span.size());
     memcpy(dest, span.data(), to_copy);
 
     return to_copy;
   }
 };
 
-class ByteStream {
-  DRIVER_BODY(ByteStream, edr::ByteStream);
+class ByteStream : public DriverBase {
+  DRIVER_BODY(ByteStream);
 
 public:
   static ByteStream ConnectTCP(const std::shared_ptr<Context> &context_sp,

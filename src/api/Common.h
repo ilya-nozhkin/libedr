@@ -11,16 +11,15 @@
 #define SWIG_PYTHON_THREAD_END_ALLOW
 #endif
 
-#define TRANSACTION_BODY(DRIVER_API_NAME, DRIVER_LIB_NAME)                     \
-  friend class DRIVER_API_NAME;                                                \
+#define TRANSACTION_BODY(DRIVER_NAME)                                          \
+  friend class DRIVER_NAME;                                                    \
                                                                                \
 public:                                                                        \
-  DRIVER_API_NAME##Transaction(const DRIVER_API_NAME##Transaction &) = delete; \
-  DRIVER_API_NAME##Transaction &operator=(                                     \
-      const DRIVER_API_NAME##Transaction &) = delete;                          \
-  DRIVER_API_NAME##Transaction(DRIVER_API_NAME##Transaction &&) = default;     \
-  DRIVER_API_NAME##Transaction &operator=(DRIVER_API_NAME##Transaction &&) =   \
+  DRIVER_NAME##Transaction(const DRIVER_NAME##Transaction &) = delete;         \
+  DRIVER_NAME##Transaction &operator=(const DRIVER_NAME##Transaction &) =      \
       delete;                                                                  \
+  DRIVER_NAME##Transaction(DRIVER_NAME##Transaction &&) = default;             \
+  DRIVER_NAME##Transaction &operator=(DRIVER_NAME##Transaction &&) = delete;   \
                                                                                \
   bool Schedule() {                                                            \
     if (!m_builder)                                                            \
@@ -78,9 +77,9 @@ public:                                                                        \
   }                                                                            \
                                                                                \
 private:                                                                       \
-  DRIVER_API_NAME##Transaction(                                                \
-      const std::shared_ptr<Context> &context_sp, DRIVER_LIB_NAME *driver,     \
-      std::unique_ptr<char[]> &&name, DRIVER_LIB_NAME::Builder &&builder)      \
+  DRIVER_NAME##Transaction(                                                    \
+      const std::shared_ptr<Context> &context_sp, edr::DRIVER_NAME *driver,    \
+      std::unique_ptr<char[]> &&name, edr::DRIVER_NAME::Builder &&builder)     \
       : m_context_sp(context_sp), m_driver(driver), m_name(std::move(name)),   \
         m_builder(std::move(builder)) {}                                       \
                                                                                \
@@ -94,52 +93,58 @@ private:                                                                       \
     return *m_iterator != (*m_task)->end();                                    \
   }                                                                            \
                                                                                \
-  DRIVER_API_NAME##Transaction() = default;                                    \
+  DRIVER_NAME##Transaction() = default;                                        \
                                                                                \
   std::shared_ptr<Context> m_context_sp;                                       \
-  DRIVER_LIB_NAME *m_driver = nullptr;                                         \
+  edr::DRIVER_NAME *m_driver = nullptr;                                        \
   std::unique_ptr<char[]> m_name;                                              \
   std::string m_error_message;                                                 \
-  std::optional<DRIVER_LIB_NAME::Builder> m_builder;                           \
-  std::optional<DRIVER_LIB_NAME::CheckedTask<DRIVER_LIB_NAME::Status>> m_task; \
-  std::optional<DRIVER_LIB_NAME::Status::Iterator> m_iterator;
+  std::optional<edr::DRIVER_NAME::Builder> m_builder;                          \
+  std::optional<edr::DRIVER_NAME::CheckedTask<edr::DRIVER_NAME::Status>>       \
+      m_task;                                                                  \
+  std::optional<edr::DRIVER_NAME::Status::Iterator> m_iterator;
 
 #ifdef SWIG
-#define EXTERNAL_DRIVER_CONSTRUCTOR(DRIVER_API_NAME, DRIVER_LIB_NAME)
+#define EXTERNAL_DRIVER_CONSTRUCTOR(DRIVER_NAME)
+#define SELF(DRIVER_NAME)
+#define MOVE_CONSTRUCTOR(DRIVER_NAME) DRIVER_NAME(DRIVER_NAME &&) = delete;
 #else
-#define EXTERNAL_DRIVER_CONSTRUCTOR(DRIVER_API_NAME, DRIVER_LIB_NAME)          \
-  DRIVER_API_NAME(const std::shared_ptr<Context> &context_sp,                  \
-                  DRIVER_LIB_NAME *driver = nullptr)                           \
-      : m_context_sp(context_sp), m_driver(driver) {}
+#define EXTERNAL_DRIVER_CONSTRUCTOR(DRIVER_NAME)                               \
+  DRIVER_NAME(const std::shared_ptr<Context> &context_sp,                      \
+              edr::DRIVER_NAME *driver = nullptr)                              \
+      : DriverBase(context_sp, driver) {}
+
+#define SELF(DRIVER_NAME)                                                      \
+  edr::DRIVER_NAME *Self() { return static_cast<edr::DRIVER_NAME *>(m_driver); }
+
+#define MOVE_CONSTRUCTOR(DRIVER_NAME) DRIVER_NAME(DRIVER_NAME &&) = default;
 #endif
 
-#define DRIVER_BODY(DRIVER_API_NAME, DRIVER_LIB_NAME)                          \
+#define DRIVER_BODY(DRIVER_NAME)                                               \
 public:                                                                        \
-  EXTERNAL_DRIVER_CONSTRUCTOR(DRIVER_API_NAME, DRIVER_LIB_NAME)                \
+  EXTERNAL_DRIVER_CONSTRUCTOR(DRIVER_NAME)                                     \
                                                                                \
-  DRIVER_API_NAME(const DRIVER_API_NAME &) = delete;                           \
-  DRIVER_API_NAME &operator=(const DRIVER_API_NAME &) = delete;                \
-  DRIVER_API_NAME(DRIVER_API_NAME &&) = default;                               \
-  DRIVER_API_NAME &operator=(DRIVER_API_NAME &&) = delete;                     \
+  DRIVER_NAME(const DRIVER_NAME &) = delete;                                   \
+  DRIVER_NAME &operator=(const DRIVER_NAME &) = delete;                        \
+  DRIVER_NAME &operator=(DRIVER_NAME &&) = delete;                             \
+  MOVE_CONSTRUCTOR(DRIVER_NAME)                                                \
                                                                                \
-  DRIVER_API_NAME##Transaction Initiate(const char *name) {                    \
+  virtual ~DRIVER_NAME() = default;                                            \
+                                                                               \
+  DRIVER_NAME##Transaction Initiate(const char *name) {                        \
     if (nullptr == m_driver || nullptr == name)                                \
-      return DRIVER_API_NAME##Transaction();                                   \
+      return DRIVER_NAME##Transaction();                                       \
                                                                                \
     size_t length = strlen(name);                                              \
     std::unique_ptr<char[]> saved_name(new char[1 + length]);                  \
     memcpy(saved_name.get(), name, length);                                    \
     saved_name.get()[length] = '\0';                                           \
     const char *saved_name_ptr = saved_name.get();                             \
-    return DRIVER_API_NAME##Transaction(m_context_sp, m_driver,                \
-                                        std::move(saved_name),                 \
-                                        m_driver->Initiate(saved_name_ptr));   \
+    return DRIVER_NAME##Transaction(m_context_sp, Self(),                      \
+                                    std::move(saved_name),                     \
+                                    Self()->Initiate(saved_name_ptr));         \
   }                                                                            \
                                                                                \
-  bool IsValid() { return nullptr != m_driver; }                               \
-                                                                               \
-protected:                                                                     \
-  std::shared_ptr<Context> m_context_sp;                                       \
-  DRIVER_LIB_NAME *m_driver = nullptr;
+  SELF(DRIVER_NAME)
 
 #endif

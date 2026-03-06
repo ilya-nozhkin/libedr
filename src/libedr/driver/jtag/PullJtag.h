@@ -21,6 +21,8 @@ public:
 
   void Terminate() override;
 
+  bool Serve(bool /*wait_if_empty*/) override { return false; }
+
   void Join(const std::coroutine_handle<> &to_complete) override;
 
   size_t PullTMSTDI(BitStream<BitStorage> &tms_dest,
