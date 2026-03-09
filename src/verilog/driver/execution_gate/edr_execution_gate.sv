@@ -16,6 +16,7 @@ module edr_execution_gate #(
     input event   context_initialized_event_i,
 
     output chandle execution_gate_handle_o,
+    output chandle driver_base_handle_o,
     output event   execution_gate_initialized_event_o
 );
   import "DPI-C" function chandle edr_ExecutionGate_new(
@@ -30,7 +31,12 @@ module edr_execution_gate #(
     input int unsigned mode
   );
 
-  import "DPI-C" function void edr_ExecutionGate_StallIfNeeded(input byte target_is_idle);
+  import "DPI-C" function void edr_ExecutionGate_StallIfNeeded(
+    input chandle exe_gate,
+    input byte target_is_idle
+  );
+
+  import "DPI-C" function chandle edr_ExecutionGate_CastToBase(input chandle exe_gate);
 
   initial begin
     execution_gate_mode_t effective_mode;
@@ -39,6 +45,8 @@ module edr_execution_gate #(
     wait (context_initialized_event_i.triggered);
 
     execution_gate_handle_o = edr_ExecutionGate_new(context_handle_i, NAME);
+    driver_base_handle_o = edr_ExecutionGate_CastToBase(execution_gate_handle_o);
+
     effective_mode = execution_gate_mode_t
         '(edr_ExecutionGate_SetMode(execution_gate_handle_o, int'(INITIAL_MODE)));
     if (effective_mode != INITIAL_MODE) begin
@@ -57,7 +65,8 @@ module edr_execution_gate #(
 
   always @(negedge clk_i) begin
     if (execution_gate_handle_o != 0) begin
-      edr_ExecutionGate_StallIfNeeded(system_is_idle_i ? byte'(1) : byte'(0));
+      edr_ExecutionGate_StallIfNeeded(execution_gate_handle_o,
+                                      system_is_idle_i ? byte'(1) : byte'(0));
     end
   end
 endmodule

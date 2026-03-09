@@ -12,17 +12,22 @@ PullJtag::PullJtag(const DriverContext &ctx, std::string_view name,
       m_tms_tdi_generator(GenerateTMSTDI()), m_tdo_generator(GenerateTDO()) {}
 
 void PullJtag::Terminate() {
-  std::unique_lock<std::mutex> lock(m_mutex);
-  while (!m_queue.NoScheduled())
-    m_queue.StartNextScheduled();
+  {
+    std::unique_lock<std::mutex> lock(m_mutex);
+    while (!m_queue.NoScheduled())
+      m_queue.StartNextScheduled();
 
-  while (!m_queue.NoInProgress()) {
-    auto item = m_queue.PrepareToResolve();
+    while (!m_queue.NoInProgress()) {
+      auto item = m_queue.PrepareToResolve();
 
-    lock.unlock();
-    item.Resolve();
-    lock.lock();
+      lock.unlock();
+      item.Resolve();
+      lock.lock();
+    }
   }
+
+  if (nullptr != m_exe_gate)
+    m_exe_gate->Terminate();
 }
 
 void PullJtag::Join(const std::coroutine_handle<> &to_complete) {}

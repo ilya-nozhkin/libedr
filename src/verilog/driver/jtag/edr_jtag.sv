@@ -16,6 +16,7 @@ module edr_jtag #(
     input event   execution_gate_initialized_event_i,
 
     output chandle jtag_handle_o,
+    output chandle driver_base_handle_o,
     output event   jtag_initialized_event_o
 );
   import "DPI-C" function chandle edr_PullJtag_new(
@@ -39,6 +40,8 @@ module edr_jtag #(
     input byte src_bits[],
     input int unsigned num_bits
   );
+
+  import "DPI-C" function chandle edr_PullJtag_CastToBase(input chandle jtag);
 
   parameter int LAST_BIT = BITS_PER_BATCH - 1;
   parameter int BYTES_PER_BATCH = BITS_PER_BATCH / 8;
@@ -111,6 +114,7 @@ module edr_jtag #(
     wait (execution_gate_initialized_event_i.triggered);
 
     jtag_handle_o = edr_PullJtag_new(context_handle_i, NAME, execution_gate_handle_i);
+    driver_base_handle_o = edr_PullJtag_CastToBase(jtag_handle_o);
 
     ->jtag_initialized_event_o;
   end

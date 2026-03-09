@@ -54,6 +54,8 @@ public:
     });
   }
 
+  void Terminate() { return m_tunnel.Terminate(); }
+
   bool IsAlive() { return m_tunnel.IsAlive(); }
 
 private:

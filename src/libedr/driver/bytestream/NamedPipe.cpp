@@ -57,7 +57,7 @@ std::pair<size_t, Error> NamedPipe::Read(std::span<std::byte> dest) {
     return {received, Error::Success()};
 
   if (received == 0)
-    return {0, m_context.MakeError<CauseTerminated>("TCP named_pipe")};
+    return {0, m_context.MakeError<CauseTerminated>("Named pipe")};
 
   return {0, m_context.MakeError<CauseErrno>("recv", received)};
 }

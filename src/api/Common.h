@@ -145,6 +145,10 @@ public:                                                                        \
                                     Self()->Initiate(saved_name_ptr));         \
   }                                                                            \
                                                                                \
-  SELF(DRIVER_NAME)
+  SELF(DRIVER_NAME)                                                            \
+                                                                               \
+  void Terminate() { Self()->Terminate(); }                                    \
+                                                                               \
+  DriverBase *CastToBase() { return static_cast<DriverBase *>(this); }
 
 #endif

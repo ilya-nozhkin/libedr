@@ -357,7 +357,10 @@ private:
 
   Task<> EventLoop() {
     m_is_alive = true;
-    auto guard = MakeScopeGuard([this]() { m_is_alive = false; });
+    auto guard = MakeScopeGuard([this]() {
+      m_is_alive = false;
+      WakeUpExecutionGates();
+    });
 
     auto status = m_bstream.MakeEmptyStatus();
     while (true) {
@@ -628,6 +631,15 @@ private:
       co_return m_context.MakeError<CauseNestedError>(status.GetError());
 
     co_return Error::Success();
+  }
+
+  void WakeUpExecutionGates() {
+    size_t num_drivers = m_next_my_driver_index;
+    for (size_t i = 0; i < num_drivers; i++) {
+      auto &driver = m_my_drivers.Get(i)->get();
+      if (driver.GetID() == DriverID::ExecutionGate)
+        driver.Terminate();
+    }
   }
 
   using MyDriverMap =

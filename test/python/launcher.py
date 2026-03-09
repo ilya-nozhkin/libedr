@@ -6,6 +6,9 @@ import sys
 from pathlib import Path
 
 
+SCRIPT_DIR = Path(__file__).parent
+
+
 def get_tests(test_collection):
     for test in test_collection:
         if isinstance(test, unittest.TestCase):
@@ -30,7 +33,9 @@ def main():
         help="Add this path to sys.path before loading tests",
     )
 
-    parser.add_argument("root", help="The root directory where to start looking for tests")
+    parser.add_argument(
+        "root", help="The root directory where to start looking for tests"
+    )
 
     parser.add_argument("test", nargs="?", help="The ID of the test to run")
 
@@ -39,6 +44,12 @@ def main():
     if args.syspath:
         for syspath in args.syspath:
             sys.path.append(syspath)
+
+        os.environ["LD_LIBRARY_PATH"] = os.pathsep.join(
+            [*args.syspath, os.environ.get("LD_LIBRARY_PATH", "")]
+        )
+
+    sys.path.append(os.fspath(SCRIPT_DIR))
 
     test_suite = unittest.defaultTestLoader.discover(args.root)
 
@@ -62,10 +73,12 @@ def main():
         test_suite = unittest.TestSuite([found_test])
 
     runner = unittest.TextTestRunner(verbosity=10)
+
     result = runner.run(test_suite)
 
     if not result.wasSuccessful():
         sys.exit(1)
+
 
 if __name__ == "__main__":
     main()

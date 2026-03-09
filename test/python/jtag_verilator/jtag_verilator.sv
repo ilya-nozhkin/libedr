@@ -8,6 +8,7 @@ module jtag_verilator ();
   event   execution_gate_initialized_event;
 
   chandle jtag_handle;
+  chandle jtag_base_handle;
   event   jtag_initialized_event;
 
   wire    tck;
@@ -46,7 +47,7 @@ module jtag_verilator ();
       .execution_gate_handle_o(execution_gate_handle),
       .execution_gate_initialized_event_o(execution_gate_initialized_event),
 
-      .driver_handle_i(jtag_handle),
+      .driver_base_handle_i(jtag_base_handle),
       .driver_initialized_event_i(jtag_initialized_event),
 
       .system_is_idle_i(1)
@@ -67,6 +68,7 @@ module jtag_verilator ();
       .execution_gate_initialized_event_i(execution_gate_initialized_event),
 
       .jtag_handle_o(jtag_handle),
+      .driver_base_handle_o(jtag_base_handle),
       .jtag_initialized_event_o(jtag_initialized_event)
   );
 

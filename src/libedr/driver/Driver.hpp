@@ -622,6 +622,8 @@ public:
   virtual DriverID GetID() = 0;
   virtual std::string_view GetName() = 0;
 
+  virtual void Terminate() = 0;
+
 protected:
   FreeListAllocatorResource m_resource;
 };
@@ -797,8 +799,6 @@ public:
   virtual bool Serve(bool wait_if_empty) = 0;
 
   virtual void Join(const std::coroutine_handle<> &to_complete) = 0;
-
-  virtual void Terminate() = 0;
 
 protected:
   std::pmr::memory_resource &m_memory_resource;

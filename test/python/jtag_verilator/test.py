@@ -1,20 +1,6 @@
-import unittest
-import edr
-import os
-import sys
+from helpers import EDRTestCase
 
 
-class TestJTAGVerilator(unittest.TestCase):
+class TestJTAGVerilator(EDRTestCase):
     def test_shift_idcode(self):
-        context = edr.Context(edr.LogLevel_TRACE)
-        context.AddStdStreams()
-
-        error = edr.Error()
-
-        pipe_name = f"edr-pipe-{os.getpid()}"
-
-        pipe_server = edr.NamedPipeServer(context, pipe_name, 1, error)
-        self.assertTrue(error.Success(), error.Message())
-
-        # pipe = pipe_server.Accept(error)
-        # self.assertTrue(error.Success(), error.Message())
+        tunnel = self.run_verilator("jtag_verilator")

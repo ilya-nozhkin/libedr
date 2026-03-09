@@ -12,7 +12,7 @@ function(add_verilated_model TARGET_NAME)
   set(EDR_C_API_LIBRARY ${EDR_API_BUILD_DIR}/libcedr.so)
 
   add_custom_target(${TARGET_NAME}
-    COMMAND ${EDR_VERILATOR_EXECUTABLE} --timing --binary -Wall --top ${TARGET_NAME} ${ARG_ARGS} ${ARG_SOURCES} ${EDR_C_API_LIBRARY}
+    COMMAND ${EDR_VERILATOR_EXECUTABLE} --timing --trace --binary -Wall -CFLAGS -std=c++20 --top ${TARGET_NAME} ${ARG_ARGS} ${ARG_SOURCES} ${EDR_C_API_LIBRARY}
     DEPENDS ${ARG_SOURCES}
   )
 
