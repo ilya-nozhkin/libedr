@@ -81,10 +81,6 @@ class PullJtag final : public Jtag {
 public:
   ~PullJtag() override = default;
 
-  PullJtag(const std::shared_ptr<Context> &context_sp, const char *name)
-      : Jtag(context_sp, &context_sp->MakeWith<edr::PullJtag>(
-                             context_sp->PersistFormat("{}", name))) {}
-
   PullJtag(const std::shared_ptr<Context> &context_sp, const char *name,
            ExecutionGate &exe_gate)
       : Jtag(context_sp,

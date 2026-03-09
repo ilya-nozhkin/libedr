@@ -1,5 +1,4 @@
 module edr_tcp_server #(
-    parameter string NAME = "TCP Server",
     parameter shortint unsigned PORT = 3997
 ) (
     input chandle context_handle_i,
@@ -43,15 +42,15 @@ module edr_tcp_server #(
     if (0 != edr_Error_Fail(error_handle)) begin
       $display("Failed to create a TCP server: ", edr_Error_Message(error_handle));
       $finish(0);
+    end else begin
+      byte_stream_handle_o = edr_TCPServer_Accept(tcp_server_handle, error_handle);
+      if (0 != edr_Error_Fail(error_handle)) begin
+        $display("Failed to create a TCP server: ", edr_Error_Message(error_handle));
+        $finish(0);
+      end else begin
+        ->byte_stream_initialized_event_o;
+      end
     end
-
-    byte_stream_handle_o = edr_TCPServer_Accept(tcp_server_handle, error_handle);
-    if (0 != edr_Error_Fail(error_handle)) begin
-      $display("Failed to create a TCP server: ", edr_Error_Message(error_handle));
-      $finish(0);
-    end
-
-    ->byte_stream_initialized_event_o;
   end
 
   final begin

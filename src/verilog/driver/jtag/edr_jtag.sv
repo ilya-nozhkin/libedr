@@ -59,10 +59,10 @@ module edr_jtag #(
   assign tms_o = tms[0];
   assign tdi_o = tdi[0];
 
-  function static void ExchangeData();
-    byte tdo_buf[BYTES_PER_BATCH];
+  function automatic void ExchangeData();
     byte tms_buf[BYTES_PER_BATCH];
     byte tdi_buf[BYTES_PER_BATCH];
+    byte tdo_buf[BYTES_PER_BATCH];
     int unsigned num_pushed_bits;
     int unsigned new_num_bits;
 
@@ -77,6 +77,10 @@ module edr_jtag #(
     end
 
     num_pushed_bits = edr_PullJtag_PushTDO(jtag_handle_o, tdo_buf, num_bits_to_capture);
+    if (num_pushed_bits != num_bits_to_capture) begin
+      $display("The number of pushed TDO bits does not equal to to the number of requested bits");
+      $finish(0);
+    end
 
     bit_to_capture <= 0;
 

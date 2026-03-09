@@ -26,9 +26,9 @@ public:
   }
 #endif
 
-  bool Success() { return m_error.Success() ? 1 : 0; }
+  bool Fail() { return static_cast<bool>(m_error); }
 
-  bool Fail() { return Success() ? 0 : 1; }
+  bool Success() { return !Fail(); }
 
   const char *Message() {
     if (!m_string.empty())

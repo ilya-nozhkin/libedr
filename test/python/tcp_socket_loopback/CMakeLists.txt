@@ -1,0 +1,1 @@
+add_python_tests_from_current_directory()

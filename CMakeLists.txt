@@ -18,11 +18,17 @@ set(EDR_PYTHON3_INCLUDE_DIR "" CACHE STRING
 set(EDR_PYTHON3_EXECUTABLE "" CACHE STRING
     "Path to a Python 3 executable")
 
+set(EDR_VERILATOR_EXECUTABLE "" CACHE STRING
+    "Path to verilator")
+
 # [DEPENDENCIES]
 
 find_package(GTest PATHS ${EDR_GTEST_CMAKE_PACKAGE_PATH})
 
 # [PROJECT]
+
+set(EDR_VERILOG_DIR ${CMAKE_CURRENT_LIST_DIR}/src/verilog)
+set(EDR_THIRD_PARTY_DIR ${CMAKE_CURRENT_LIST_DIR}/third_party)
 
 add_subdirectory(src)
 

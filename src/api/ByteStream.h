@@ -9,6 +9,7 @@
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/bytestream/ByteStream.hpp"
 #include "libedr/driver/bytestream/ByteStreamAction.hpp"
+#include "libedr/driver/bytestream/NamedPipe.h"
 #include "libedr/driver/bytestream/TCPSocket.h"
 
 #include <memory>
@@ -79,6 +80,23 @@ public:
 
     return ByteStream(context_sp, &bstream);
   }
+
+  static ByteStream ConnectNamedPipe(const std::shared_ptr<Context> &context_sp,
+                                     const char *pipe_name, Error &error) {
+    if (nullptr == pipe_name)
+      return ByteStream(context_sp, nullptr);
+
+    auto *persistent_pipe =
+        context_sp->CallWith(error, edr::NamedPipe::Connect, pipe_name);
+    if (nullptr == persistent_pipe)
+      return ByteStream(context_sp, nullptr);
+
+    edr::ByteStream &bstream = context_sp->MakeWith<edr::DeferredByteStream>(
+        context_sp->PersistFormat("NamedPipe -> {}", pipe_name),
+        *persistent_pipe);
+
+    return ByteStream(context_sp, &bstream);
+  }
 };
 
 class TCPServer {
@@ -121,6 +139,43 @@ public:
 private:
   std::shared_ptr<Context> m_context_sp;
   edr::TCPServer *m_server = nullptr;
+};
+
+class NamedPipeServer {
+public:
+  explicit NamedPipeServer(const std::shared_ptr<Context> &context_sp,
+                           const char *pipe_name, int max_num_queued_clients,
+                           Error &error)
+      : m_context_sp(context_sp),
+        m_server(m_context_sp->CallWith(error, edr::NamedPipeServer::Create,
+                                        pipe_name, max_num_queued_clients)),
+        m_persistent_name(m_context_sp->PersistFormat("{}", pipe_name)) {}
+
+  bool IsValid() const { return nullptr != m_server; }
+
+  ByteStream Accept(Error &error) {
+    if (nullptr == m_server)
+      return ByteStream(m_context_sp, nullptr);
+
+    auto exp_pipe = m_server->Accept();
+    if (!exp_pipe) {
+      error = std::move(exp_pipe.error());
+      return ByteStream(m_context_sp, nullptr);
+    }
+
+    edr::NamedPipe &persistent_pipe = m_context_sp->Store(std::move(*exp_pipe));
+
+    edr::ByteStream &bstream = m_context_sp->MakeWith<edr::DeferredByteStream>(
+        m_context_sp->PersistFormat("NamedPipe <- {}", m_persistent_name),
+        persistent_pipe);
+
+    return ByteStream(m_context_sp, &bstream);
+  }
+
+private:
+  std::shared_ptr<Context> m_context_sp;
+  edr::NamedPipeServer *m_server = nullptr;
+  const char *m_persistent_name = nullptr;
 };
 
 #endif

@@ -1,10 +1,9 @@
+from typing import Optional
 import unittest
 import os
 import argparse
 import sys
 from pathlib import Path
-
-SCRIPT_DIR = Path(__file__).parent
 
 
 def get_tests(test_collection):
@@ -31,6 +30,8 @@ def main():
         help="Add this path to sys.path before loading tests",
     )
 
+    parser.add_argument("root", help="The root directory where to start looking for tests")
+
     parser.add_argument("test", nargs="?", help="The ID of the test to run")
 
     args = parser.parse_args()
@@ -39,17 +40,26 @@ def main():
         for syspath in args.syspath:
             sys.path.append(syspath)
 
+    test_suite = unittest.defaultTestLoader.discover(args.root)
+
     if args.list:
-        test_suite = unittest.defaultTestLoader.discover(os.fspath(SCRIPT_DIR))
         for test in get_tests(test_suite):
             print(test.id())
 
         return
 
     if args.test:
-        test_suite = unittest.defaultTestLoader.loadTestsFromName(args.test)
-    else:
-        test_suite = unittest.defaultTestLoader.discover(os.fspath(SCRIPT_DIR))
+        found_test: Optional[unittest.TestCase] = None
+        for test in get_tests(test_suite):
+            if test.id() == args.test:
+                found_test = test
+                break
+
+        if found_test is None:
+            print(f"No test named {args.test}", file=sys.stderr)
+            sys.exit(1)
+
+        test_suite = unittest.TestSuite([found_test])
 
     runner = unittest.TextTestRunner(verbosity=10)
     result = runner.run(test_suite)

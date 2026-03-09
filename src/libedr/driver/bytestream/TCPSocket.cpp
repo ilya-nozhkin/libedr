@@ -99,8 +99,6 @@ void TCPSocket::Terminate() {
 std::expected<TCPServer, Error> TCPServer::Create(const DriverContext &context,
                                                   uint16_t port,
                                                   int max_num_queued_clients) {
-  auto &error_resource = context.TransactionBufferResource();
-
   auto server_socket_fd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
   if (g_invalid_socket == server_socket_fd)
     return std::unexpected(
