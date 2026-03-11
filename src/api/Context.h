@@ -5,7 +5,9 @@
 
 #include "libedr/driver/Driver.hpp"
 #include "libedr/driver/Logger.hpp"
-#include <expected>
+#include "libedr/util/asynchronicity/Asynchronicity.hpp"
+#include "libedr/util/memory/FreeListAllocator.hpp"
+
 #include <format>
 #include <mutex>
 #include <type_traits>
@@ -31,13 +33,55 @@ inline edr::LogLevel ToEDRLogLevel(LogLevel log_level) {
     return edr::LogLevel::TRACE;
   }
 }
+
+class TransactionNameGuard : public edr::FreeListAsynchronous {
+public:
+  using Cookie = size_t;
+
+  TransactionNameGuard(edr::DriverContext &ctx)
+      : edr::FreeListAsynchronous(ctx.TaskFrameResource()) {}
+
+  std::pair<Cookie, std::string_view> AllocateName(const char *name) {
+    std::scoped_lock<std::mutex> lock(m_mutex);
+
+    if (!m_free_slots.empty()) {
+      size_t slot = m_free_slots.back();
+      m_free_slots.pop_back();
+
+      auto &buffer = m_slots[slot];
+      buffer = name;
+
+      return std::make_pair(slot, std::string_view(buffer));
+    }
+
+    size_t slot = m_slots.size();
+    auto &emplaced = m_slots.emplace_back(name);
+    return std::make_pair(slot, std::string_view(emplaced));
+  }
+
+  template <class T, class B>
+  Task<typename T::Status> Schedule(Cookie slot, T &driver, B &&builder) {
+    auto status = co_await driver.Schedule(std::forward<B>(builder));
+
+    std::scoped_lock<std::mutex> lock(m_mutex);
+    m_free_slots.push_back(slot);
+
+    co_return status;
+  }
+
+private:
+  std::mutex m_mutex;
+  std::vector<std::string> m_slots;
+  std::vector<size_t> m_free_slots;
+};
+
 #endif
 
 class Context {
 public:
   Context(LogLevel log_level)
       : m_logger(m_output, ToEDRLogLevel(log_level)),
-        m_context({.logger = m_logger}) {}
+        m_context({.logger = m_logger}), m_transaction_name_guard(m_context) {}
 
   Context(const Context &) = delete;
   Context(Context &&) = delete;
@@ -94,6 +138,8 @@ public:
     auto &emplaced = Store(std::move(formatted));
     return emplaced.c_str();
   }
+
+  TransactionNameGuard &GetNameGuard() { return m_transaction_name_guard; }
 #endif
 
 private:
@@ -124,6 +170,8 @@ private:
 
   std::mutex m_entities_mutex;
   std::vector<std::shared_ptr<void>> m_entities;
+
+  TransactionNameGuard m_transaction_name_guard;
 };
 
 #endif

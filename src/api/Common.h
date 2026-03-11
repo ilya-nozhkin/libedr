@@ -25,7 +25,8 @@ public:                                                                        \
     if (!m_builder)                                                            \
       return false;                                                            \
                                                                                \
-    m_task.emplace(m_driver->Schedule(std::move(*m_builder)));                 \
+    m_task.emplace(m_context_sp->GetNameGuard().Schedule(                      \
+        m_name_cookie, *m_driver, std::move(*m_builder)));                     \
     m_builder.reset();                                                         \
     return true;                                                               \
   }                                                                            \
@@ -69,6 +70,11 @@ public:                                                                        \
     SWIG_PYTHON_THREAD_END_ALLOW;                                              \
   }                                                                            \
                                                                                \
+  void Do() {                                                                  \
+    Schedule();                                                                \
+    Join();                                                                    \
+  }                                                                            \
+                                                                               \
   void Next() {                                                                \
     if (!InitCheckIterator())                                                  \
       return;                                                                  \
@@ -76,12 +82,35 @@ public:                                                                        \
     ++(*m_iterator);                                                           \
   }                                                                            \
                                                                                \
+  void NextN(unsigned num) {                                                   \
+    for (unsigned i = 0; i < num; i++)                                         \
+      Next();                                                                  \
+  }                                                                            \
+                                                                               \
+  void Reuse(const char *name) {                                               \
+    auto [new_cookie, persistent_name] =                                       \
+        m_context_sp->GetNameGuard().AllocateName(name);                       \
+                                                                               \
+    m_name_cookie = new_cookie;                                                \
+                                                                               \
+    if (m_task && *m_task && m_task->done()) {                                 \
+      m_builder.emplace(                                                       \
+          m_driver->Initiate(persistent_name, std::move(**m_task)));           \
+      m_task.reset();                                                          \
+      return;                                                                  \
+    }                                                                          \
+                                                                               \
+    m_builder.emplace(m_driver->Initiate(persistent_name));                    \
+    m_task.reset();                                                            \
+  }                                                                            \
+                                                                               \
 private:                                                                       \
-  DRIVER_NAME##Transaction(                                                    \
-      const std::shared_ptr<Context> &context_sp, edr::DRIVER_NAME *driver,    \
-      std::unique_ptr<char[]> &&name, edr::DRIVER_NAME::Builder &&builder)     \
-      : m_context_sp(context_sp), m_driver(driver), m_name(std::move(name)),   \
-        m_builder(std::move(builder)) {}                                       \
+  DRIVER_NAME##Transaction(const std::shared_ptr<Context> &context_sp,         \
+                           edr::DRIVER_NAME *driver,                           \
+                           TransactionNameGuard::Cookie name_cookie,           \
+                           edr::DRIVER_NAME::Builder &&builder)                \
+      : m_context_sp(context_sp), m_driver(driver),                            \
+        m_name_cookie(name_cookie), m_builder(std::move(builder)) {}           \
                                                                                \
   bool InitCheckIterator() {                                                   \
     if (!m_task || !(*m_task) || !m_task->done())                              \
@@ -97,11 +126,10 @@ private:                                                                       \
                                                                                \
   std::shared_ptr<Context> m_context_sp;                                       \
   edr::DRIVER_NAME *m_driver = nullptr;                                        \
-  std::unique_ptr<char[]> m_name;                                              \
+  TransactionNameGuard::Cookie m_name_cookie;                                  \
   std::string m_error_message;                                                 \
   std::optional<edr::DRIVER_NAME::Builder> m_builder;                          \
-  std::optional<edr::DRIVER_NAME::CheckedTask<edr::DRIVER_NAME::Status>>       \
-      m_task;                                                                  \
+  std::optional<TransactionNameGuard::Task<edr::DRIVER_NAME::Status>> m_task;  \
   std::optional<edr::DRIVER_NAME::Status::Iterator> m_iterator;
 
 #ifdef SWIG
@@ -135,14 +163,10 @@ public:                                                                        \
     if (nullptr == m_driver || nullptr == name)                                \
       return DRIVER_NAME##Transaction();                                       \
                                                                                \
-    size_t length = strlen(name);                                              \
-    std::unique_ptr<char[]> saved_name(new char[1 + length]);                  \
-    memcpy(saved_name.get(), name, length);                                    \
-    saved_name.get()[length] = '\0';                                           \
-    const char *saved_name_ptr = saved_name.get();                             \
-    return DRIVER_NAME##Transaction(m_context_sp, Self(),                      \
-                                    std::move(saved_name),                     \
-                                    Self()->Initiate(saved_name_ptr));         \
+    auto [name_cookie, persistent_name] =                                      \
+        m_context_sp->GetNameGuard().AllocateName(name);                       \
+    return DRIVER_NAME##Transaction(m_context_sp, Self(), name_cookie,         \
+                                    Self()->Initiate(persistent_name));        \
   }                                                                            \
                                                                                \
   SELF(DRIVER_NAME)                                                            \

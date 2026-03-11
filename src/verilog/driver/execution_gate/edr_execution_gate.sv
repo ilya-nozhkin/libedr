@@ -9,9 +9,6 @@ module edr_execution_gate #(
     parameter string NAME = "Execution Gate",
     parameter execution_gate_mode_t INITIAL_MODE = EDR_STALL_IF_NO_REQUESTS_AND_IDLE
 ) (
-    input clk_i,
-    input system_is_idle_i,
-
     input chandle context_handle_i,
     input event   context_initialized_event_i,
 
@@ -29,11 +26,6 @@ module edr_execution_gate #(
   import "DPI-C" function int unsigned edr_ExecutionGate_SetMode(
     input chandle exe_gate,
     input int unsigned mode
-  );
-
-  import "DPI-C" function void edr_ExecutionGate_StallIfNeeded(
-    input chandle exe_gate,
-    input byte target_is_idle
   );
 
   import "DPI-C" function chandle edr_ExecutionGate_CastToBase(input chandle exe_gate);
@@ -60,13 +52,6 @@ module edr_execution_gate #(
   final begin
     if (execution_gate_handle_o != 0) begin
       edr_ExecutionGate_delete(execution_gate_handle_o);
-    end
-  end
-
-  always @(negedge clk_i) begin
-    if (execution_gate_handle_o != 0) begin
-      edr_ExecutionGate_StallIfNeeded(execution_gate_handle_o,
-                                      system_is_idle_i ? byte'(1) : byte'(0));
     end
   end
 endmodule

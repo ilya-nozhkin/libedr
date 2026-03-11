@@ -615,24 +615,16 @@ private:
 
 class DriverBase {
 public:
-  DriverBase(std::pmr::memory_resource &resource) : m_resource(resource) {}
-
   virtual ~DriverBase() = default;
 
   virtual DriverID GetID() = 0;
   virtual std::string_view GetName() = 0;
 
   virtual void Terminate() = 0;
-
-protected:
-  FreeListAllocatorResource m_resource;
 };
 
 template <DriverID t_driver_id, IsAction TAction>
-class Driver : public DriverBase,
-               public edr::Asynchronous<ByteFreeListAllocator> {
-  using Asynchronous = edr::Asynchronous<ByteFreeListAllocator>;
-
+class Driver : public DriverBase, public FreeListAsynchronous {
   template <class Arg> struct ExpandArg {
     template <class F> static auto Do(F &&func, Arg &&arg) {
       return std::forward<F>(func)(std::forward<Arg>(arg));
@@ -653,12 +645,13 @@ public:
   using Status = TransactionStatus<TAction>;
   using TxInProgress = TransactionInProgress<TAction>;
 
-  template <class... Args> using Task = Asynchronous::template Task<Args...>;
   template <class... Args>
-  using CheckedTask = Asynchronous::template CheckedTask<Args...>;
+  using Task = FreeListAsynchronous::template Task<Args...>;
+  template <class... Args>
+  using CheckedTask = FreeListAsynchronous::template CheckedTask<Args...>;
 
   Driver(const DriverContext &ctx, std::string_view name)
-      : DriverBase(ctx.TaskFrameResource()), Asynchronous(m_resource),
+      : FreeListAsynchronous(ctx.TaskFrameResource()),
         m_memory_resource(ctx.TransactionBufferResource()),
         m_logger(ctx.logger), m_name(name), m_buffers(m_memory_resource) {}
 

@@ -13,9 +13,7 @@ module test_tunnel (
     output event   execution_gate_initialized_event_o,
 
     input chandle driver_base_handle_i,
-    input event   driver_initialized_event_i,
-
-    input system_is_idle_i
+    input event   driver_initialized_event_i
 );
 
   chandle pipe_handle;
@@ -48,9 +46,6 @@ module test_tunnel (
   );
 
   edr_execution_gate edr_execution_gate_instance (
-      .clk_i(clk_o),
-      .system_is_idle_i(system_is_idle_i),
-
       .context_handle_i(context_handle_o),
       .context_initialized_event_i(context_initialized_event_o),
 
@@ -75,7 +70,7 @@ module test_tunnel (
   );
 
   initial begin
-    $dumpfile("wave.vcd");
+    $dumpfile("waves.vcd");
     $dumpvars(0);
 
     clk_o = 0;

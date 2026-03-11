@@ -1,6 +1,7 @@
 #ifndef LIBEDR_UTIL_MEMORY_FREELISTALLOCATOR_HPP
 #define LIBEDR_UTIL_MEMORY_FREELISTALLOCATOR_HPP
 
+#include "libedr/util/asynchronicity/Asynchronicity.hpp"
 #include "libedr/util/miscellaneous/Spinlock.hpp"
 
 #include <cassert>
@@ -124,6 +125,23 @@ private:
 };
 
 using ByteFreeListAllocator = FreeListAllocator<std::byte>;
+
+class FreeListAsynchronousResourceStorage {
+public:
+  FreeListAsynchronousResourceStorage(std::pmr::memory_resource &resource)
+      : m_resource(resource) {}
+
+protected:
+  FreeListAllocatorResource m_resource;
+};
+
+class FreeListAsynchronous : private FreeListAsynchronousResourceStorage,
+                             public Asynchronous<ByteFreeListAllocator> {
+public:
+  FreeListAsynchronous(std::pmr::memory_resource &resource)
+      : FreeListAsynchronousResourceStorage(resource),
+        Asynchronous(m_resource) {}
+};
 
 } // namespace edr
 

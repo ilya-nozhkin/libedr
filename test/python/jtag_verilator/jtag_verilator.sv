@@ -48,13 +48,14 @@ module jtag_verilator ();
       .execution_gate_initialized_event_o(execution_gate_initialized_event),
 
       .driver_base_handle_i(jtag_base_handle),
-      .driver_initialized_event_i(jtag_initialized_event),
-
-      .system_is_idle_i(1)
+      .driver_initialized_event_i(jtag_initialized_event)
   );
 
-  edr_jtag edr_jtag_instance (
+  edr_jtag #(
+      .BITS_PER_BATCH(16)
+  ) edr_jtag_instance (
       .clk_i(clk),
+      .system_is_idle_i(1),
 
       .tck_o(tck),
       .tms_o(tms),

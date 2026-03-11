@@ -12,6 +12,7 @@ class EDRTestCase(unittest.TestCase):
 
         self.context = edr.Context(edr.LogLevel_TRACE)
         self.context.AddStdStreams()
+        self.context.AddFile("test.log")
 
         self.error = edr.Error()
 

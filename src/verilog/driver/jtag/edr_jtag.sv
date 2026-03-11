@@ -3,6 +3,7 @@ module edr_jtag #(
     parameter string NAME = "JTAG"
 ) (
     input clk_i,
+    input system_is_idle_i,
 
     output tck_o,
     output tms_o,
@@ -29,19 +30,24 @@ module edr_jtag #(
 
   import "DPI-C" function int unsigned edr_PullJtag_PullTMSTDI(
     input chandle jtag,
-    output byte tms_dest[],
+    output byte tms_dest[BYTES_PER_BATCH],
     input int unsigned max_num_tms,
-    output byte tdi_dest[],
+    output byte tdi_dest[BYTES_PER_BATCH],
     input int unsigned max_num_tdi
   );
 
   import "DPI-C" function int unsigned edr_PullJtag_PushTDO(
     input chandle jtag,
-    input byte src_bits[],
+    input byte src_bits[BYTES_PER_BATCH],
     input int unsigned num_bits
   );
 
   import "DPI-C" function chandle edr_PullJtag_CastToBase(input chandle jtag);
+
+  import "DPI-C" function void edr_ExecutionGate_StallIfNeeded(
+    input chandle exe_gate,
+    input byte target_is_idle
+  );
 
   parameter int LAST_BIT = BITS_PER_BATCH - 1;
   parameter int BYTES_PER_BATCH = BITS_PER_BATCH / 8;
@@ -86,6 +92,9 @@ module edr_jtag #(
     end
 
     bit_to_capture <= 0;
+
+    edr_ExecutionGate_StallIfNeeded(execution_gate_handle_i,
+                                    system_is_idle_i ? byte'(1) : byte'(0));
 
     new_num_bits =
         edr_PullJtag_PullTMSTDI(jtag_handle_o, tms_buf, BITS_PER_BATCH, tdi_buf, BITS_PER_BATCH);
