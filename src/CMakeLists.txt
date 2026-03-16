@@ -1,4 +1,5 @@
 add_subdirectory(libedr)
+add_subdirectory(verilog)
 
 if (NOT EDR_SWIG_VERSION_OUTPUT)
   message(WARNING
