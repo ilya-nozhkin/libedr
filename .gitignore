@@ -1,4 +1,6 @@
 out
+build
+install
 CMakePresets.json
 libedr.code-workspace
 __pycache__

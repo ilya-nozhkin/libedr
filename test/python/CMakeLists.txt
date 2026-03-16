@@ -45,9 +45,10 @@ function(add_python_tests_from_current_directory)
   endif()
 
   execute_process(
-    COMMAND ${EDR_PYTHON3_EXECUTABLE} ${PYTHON_TESTS_DIR}/launcher.py --syspath ${EDR_API_BUILD_DIR} --list ${CMAKE_CURRENT_LIST_DIR}
+    COMMAND ${EDR_PYTHON3_EXECUTABLE} ${PYTHON_TESTS_DIR}/launcher.py --syspath ${PYTHON_TESTS_DIR}/../python_stubs --list ${CMAKE_CURRENT_LIST_DIR}
     OUTPUT_VARIABLE EDR_PYTHON_TESTS_OUT
     OUTPUT_STRIP_TRAILING_WHITESPACE
+    COMMAND_ERROR_IS_FATAL ANY
   )
 
   separate_arguments(EDR_PYTHON_TESTS UNIX_COMMAND ${EDR_PYTHON_TESTS_OUT})

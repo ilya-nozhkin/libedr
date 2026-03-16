@@ -1,0 +1,66 @@
+name: Build and Test
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: recursive
+
+    - name: Install system packages
+      run: |
+        sudo apt install -y \
+          python3 \
+          python3-dev \
+          flex \
+          libfl-dev\
+          libfl2 \
+          bison
+
+    - name: Cache dependencies
+      id: cache-dependencies
+      uses: actions/cache@v4
+      with:
+        path: ${{github.workspace}}/deps
+        key: deps-${{runner.os}}-${{hashFiles('build_linux/install_*')}}
+        restore-keys: |
+          deps-${{runner.os}}-
+    
+    - name: Install dependencies
+      if: ${{ steps.cache-dependencies.outputs.cache-hit != 'true' }}
+      run: |
+        build_linux/install_googletest.sh ${{github.workspace}}/deps/googletest
+        build_linux/install_swig.sh ${{github.workspace}}/deps/swig
+        build_linux/install_verilator.sh ${{github.workspace}}/deps/verilator
+
+    - name: Configure CMake
+      run: |
+        cmake -B ${{github.workspace}}/build \
+          -DCMAKE_INSTALL_PREFIX=${{github.workspace}}/install \
+          -DCMAKE_EXPORT_COMPILE_COMMANDS=ON \
+          -DEDR_PYTHON3_EXECUTABLE=python3 \
+          -DEDR_GTEST_CMAKE_PACKAGE_PATH=${{github.workspace}}/deps/googletest/lib/cmake/GTest \
+          -DEDR_SWIG_EXECUTABLE=${{github.workspace}}/deps/swig/bin/swig \
+          -DEDR_VERILATOR_EXECUTABLE=${{github.workspace}}/deps/verilator/bin/verilator
+
+    - name: Build
+      run: cmake --build ${{github.workspace}}/build -j $(nproc) --target install
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      run: ctest -j $(nproc) --output-on-failure --output-junit ctest_report.xml
+
+    - name: Upload test report 
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: ctest-report
+        path: ${{github.workspace}}/build/ctest_report.xml

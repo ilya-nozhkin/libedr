@@ -52,6 +52,11 @@ def main():
     sys.path.append(os.fspath(SCRIPT_DIR))
 
     test_suite = unittest.defaultTestLoader.discover(args.root)
+    if unittest.defaultTestLoader.errors:
+        for err in unittest.defaultTestLoader.errors:
+            print(err, file=sys.stderr)
+        
+        sys.exit(1)
 
     if args.list:
         for test in get_tests(test_suite):

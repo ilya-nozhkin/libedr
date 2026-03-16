@@ -9,21 +9,29 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(EDR_GTEST_CMAKE_PACKAGE_PATH "" CACHE STRING
     "Path to googletest/lib/cmake/GTest")
 
-set(EDR_SWIG_EXECUTABLE "" CACHE STRING
+set(EDR_SWIG_EXECUTABLE "swig" CACHE STRING
     "Path to a swig binary, minimum version is 4.4")
 
-set(EDR_PYTHON3_INCLUDE_DIR "" CACHE STRING
-    "Path to a directory that contains Python.h")
-
-set(EDR_PYTHON3_EXECUTABLE "" CACHE STRING
+set(EDR_PYTHON3_EXECUTABLE "python3" CACHE STRING
     "Path to a Python 3 executable")
 
-set(EDR_VERILATOR_EXECUTABLE "" CACHE STRING
+set(EDR_VERILATOR_EXECUTABLE "verilator" CACHE STRING
     "Path to verilator")
 
 # [DEPENDENCIES]
 
-find_package(GTest PATHS ${EDR_GTEST_CMAKE_PACKAGE_PATH})
+find_package(GTest HINTS ${EDR_GTEST_CMAKE_PACKAGE_PATH})
+
+execute_process(
+  COMMAND ${EDR_PYTHON3_EXECUTABLE} -c "import sysconfig; print(sysconfig.get_paths()['include'])"
+  OUTPUT_VARIABLE EDR_PYTHON3_INCLUDE_DIR
+  OUTPUT_STRIP_TRAILING_WHITESPACE
+  COMMAND_ERROR_IS_FATAL ANY
+)
+
+if (NOT IS_DIRECTORY ${EDR_PYTHON3_INCLUDE_DIR})
+  message(FATAL_ERROR "Python include directory not found")
+endif()
 
 # [PROJECT]
 
