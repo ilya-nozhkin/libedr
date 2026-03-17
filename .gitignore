@@ -5,3 +5,6 @@ CMakePresets.json
 libedr.code-workspace
 __pycache__
 constraints.txt
+*.log
+*.vcd
+obj_dir

@@ -64,14 +64,14 @@ class ByteStreamTunnel : public ByteStreamTunnelResourceStorage,
       std::numeric_limits<LengthType>::max();
 
 public:
-  template <class TDriver> class TunnelledDriver final : public TDriver {
+  template <class TDriver> class TunneledDriver final : public TDriver {
   public:
-    TunnelledDriver(ByteStreamTunnel &tunnel, DriverIndex driver_index,
-                    std::string_view name)
+    TunneledDriver(ByteStreamTunnel &tunnel, DriverIndex driver_index,
+                   std::string_view name)
         : TDriver(tunnel.m_context, name), m_tunnel(tunnel),
           m_driver_index(driver_index) {}
 
-    ~TunnelledDriver() override { Terminate(); }
+    ~TunneledDriver() override { Terminate(); }
 
     bool Serve(bool wait_if_empty) override {
       return m_tunnel.Serve(wait_if_empty);
@@ -269,9 +269,9 @@ public:
             header.driver_id,
             [this, &emplaced, &saved_name_ref]<DriverID t_id, class TAction>() {
               using TDriver = Driver<t_id, TAction>;
-              static_assert(sizeof(TunnelledDriver<TDriver>) ==
+              static_assert(sizeof(TunneledDriver<TDriver>) ==
                             sizeof(emplaced->instance_placeholder));
-              new (&emplaced->instance_placeholder[0]) TunnelledDriver<TDriver>(
+              new (&emplaced->instance_placeholder[0]) TunneledDriver<TDriver>(
                   *this, m_next_remote_driver_index, saved_name_ref);
             });
 
@@ -285,12 +285,12 @@ public:
   }
 
   template <class TDriver>
-  TunnelledDriver<TDriver> *FindByName(std::string_view name) {
+  TunneledDriver<TDriver> *FindByName(std::string_view name) {
     DriverID id = TDriver::g_id;
     for (auto &remote_driver : m_remote_drivers)
       if (remote_driver.valid && remote_driver.Get().GetID() == id &&
           remote_driver.Get().GetName() == name)
-        return static_cast<TunnelledDriver<TDriver> *>(&remote_driver.Get());
+        return static_cast<TunneledDriver<TDriver> *>(&remote_driver.Get());
 
     return nullptr;
   }
@@ -332,11 +332,11 @@ private:
 
   static_assert(sizeof(RequestHeader) == sizeof(ResponseHeader));
 
-  struct alignas(TunnelledDriver<ByteStream>) RemoteDriver {
+  struct alignas(TunneledDriver<ByteStream>) RemoteDriver {
     RemoteDriver(bool valid) : valid(valid) {}
 
     bool valid = false;
-    std::byte instance_placeholder[sizeof(TunnelledDriver<ByteStream>)];
+    std::byte instance_placeholder[sizeof(TunneledDriver<ByteStream>)];
 
     ~RemoteDriver() {
       if (valid)

@@ -29,7 +29,8 @@ module test_tunnel (
 
   edr_context edr_context_instance (
       .log_level(EDR_LOG_LEVEL_TRACE),
-      .log_to_std_streams(1),
+      .log_to_std_streams(0),
+      .log_to_file("edr_rtl.log"),
 
       .context_handle_o(context_handle_o),
       .context_initialized_event_o(context_initialized_event_o)

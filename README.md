@@ -46,3 +46,25 @@ cmake --build . --target install
 ```
 
 There are ``install_*.sh`` scripts in ``build_linux`` directory that can help with compiling the dependencies from the source code.
+
+Example: Reading IDCODE from a JTAG TAP simulated by Verilator using Python
+---------------------------------------------------------------------------
+
+Here: [examples/jtag_idcode](examples/jtag_idcode)
+
+How to run:
+
+1. Build and install the library following the steps from **How to build** section, make sure that both SWIG and Python are found by the build system (the CMake scripts print warnings if this is not the case).
+2. ``cd`` to ``examples/jtag_idcode``
+3. If you set ``CMAKE_INSTALL_PREFIX`` to anything other than ``../install`` when your were building the library, then open ``build.sh`` and ``test.py`` scripts and adjust the relative paths there accordingly.
+4. Make sure ``verilator`` is visible from ``PATH`` by running ``verilator --version``
+5. Execute ``./build.sh``
+6. Execute ``python3 ./test.py``
+
+The expected output is:
+```
+IDCODE is 0x149511c3, should be 0x149511c3
+```
+
+Check comments in [examples/jtag_idcode/test.py](examples/jtag_idcode/test.py) for a detailed explanation of how the example works.
+Check [examples/jtag_idcode/testbench.sv](examples/jtag_idcode/testbench.sv) and [examples/jtag_idcode/tunneled_jtag.sv](examples/jtag_idcode/tunneled_jtag.sv) to see how a driver and a tunnel can be instantiated in SystemVerilog.
