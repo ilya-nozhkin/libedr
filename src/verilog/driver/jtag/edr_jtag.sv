@@ -11,14 +11,11 @@ module edr_jtag #(
     input  tdo_i,
 
     input chandle context_handle_i,
-    input event   context_initialized_event_i,
 
     input chandle execution_gate_handle_i,
-    input event   execution_gate_initialized_event_i,
 
     output chandle jtag_handle_o,
-    output chandle driver_base_handle_o,
-    output event   jtag_initialized_event_o
+    output chandle driver_base_handle_o
 );
   import "DPI-C" function chandle edr_PullJtag_new(
     input chandle ctx,
@@ -119,13 +116,11 @@ module edr_jtag #(
     bit_to_capture = 0;
     jtag_handle_o = 0;
 
-    wait (context_initialized_event_i.triggered);
-    wait (execution_gate_initialized_event_i.triggered);
+    wait (context_handle_i != 0);
+    wait (execution_gate_handle_i != 0);
 
     jtag_handle_o = edr_PullJtag_new(context_handle_i, NAME, execution_gate_handle_i);
     driver_base_handle_o = edr_PullJtag_CastToBase(jtag_handle_o);
-
-    ->jtag_initialized_event_o;
   end
 
   final begin

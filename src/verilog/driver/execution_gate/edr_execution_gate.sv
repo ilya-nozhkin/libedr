@@ -10,11 +10,9 @@ module edr_execution_gate #(
     parameter execution_gate_mode_t INITIAL_MODE = EDR_STALL_IF_NO_REQUESTS_AND_IDLE
 ) (
     input chandle context_handle_i,
-    input event   context_initialized_event_i,
 
     output chandle execution_gate_handle_o,
-    output chandle driver_base_handle_o,
-    output event   execution_gate_initialized_event_o
+    output chandle driver_base_handle_o
 );
   import "DPI-C" function chandle edr_ExecutionGate_new(
     input chandle ctx,
@@ -34,7 +32,7 @@ module edr_execution_gate #(
     execution_gate_mode_t effective_mode;
     execution_gate_handle_o = 0;
 
-    wait (context_initialized_event_i.triggered);
+    wait (context_handle_i != 0);
 
     execution_gate_handle_o = edr_ExecutionGate_new(context_handle_i, NAME);
     driver_base_handle_o = edr_ExecutionGate_CastToBase(execution_gate_handle_o);
@@ -44,8 +42,6 @@ module edr_execution_gate #(
     if (effective_mode != INITIAL_MODE) begin
       $display("The effective execution gate mode is different from the requested one");
       $finish(0);
-    end else begin
-      ->execution_gate_initialized_event_o;
     end
   end
 

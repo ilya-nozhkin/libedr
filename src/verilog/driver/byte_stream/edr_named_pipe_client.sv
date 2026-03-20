@@ -2,10 +2,8 @@ module edr_named_pipe_client (
     input string pipe_name_i,
 
     input chandle context_handle_i,
-    input event   context_initialized_event_i,
 
-    output chandle byte_stream_handle_o,
-    output event   byte_stream_initialized_event_o
+    output chandle byte_stream_handle_o
 );
   chandle error_handle;
 
@@ -26,7 +24,7 @@ module edr_named_pipe_client (
     error_handle = edr_Error_new();
     byte_stream_handle_o = 0;
 
-    wait (context_initialized_event_i.triggered);
+    wait (context_handle_i != 0);
 
     byte_stream_handle_o =
         edr_ByteStream_ConnectNamedPipe(context_handle_i, pipe_name_i, error_handle);
@@ -34,8 +32,6 @@ module edr_named_pipe_client (
       $display("Failed to connect to named pipe '%s': %s", pipe_name_i, edr_Error_Message(
                error_handle));
       $finish(0);
-    end else begin
-      ->byte_stream_initialized_event_o;
     end
   end
 

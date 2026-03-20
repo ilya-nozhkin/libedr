@@ -7,17 +7,13 @@ module test_tunnel (
     output reg clk_o,
 
     output chandle context_handle_o,
-    output event   context_initialized_event_o,
 
     output chandle execution_gate_handle_o,
-    output event   execution_gate_initialized_event_o,
 
-    input chandle driver_base_handle_i,
-    input event   driver_initialized_event_i
+    input chandle driver_base_handle_i
 );
 
   chandle pipe_handle;
-  event   pipe_initialized_event;
 
   chandle execution_gate_base_handle;
 
@@ -32,27 +28,22 @@ module test_tunnel (
       .log_to_std_streams(0),
       .log_to_file("edr_rtl.log"),
 
-      .context_handle_o(context_handle_o),
-      .context_initialized_event_o(context_initialized_event_o)
+      .context_handle_o(context_handle_o)
   );
 
   edr_named_pipe_client edr_named_pipe_client_instance (
       .pipe_name_i(get_pipe_name()),
 
       .context_handle_i(context_handle_o),
-      .context_initialized_event_i(context_initialized_event_o),
 
-      .byte_stream_handle_o(pipe_handle),
-      .byte_stream_initialized_event_o(pipe_initialized_event)
+      .byte_stream_handle_o(pipe_handle)
   );
 
   edr_execution_gate edr_execution_gate_instance (
       .context_handle_i(context_handle_o),
-      .context_initialized_event_i(context_initialized_event_o),
 
       .execution_gate_handle_o(execution_gate_handle_o),
-      .driver_base_handle_o(execution_gate_base_handle),
-      .execution_gate_initialized_event_o(execution_gate_initialized_event_o)
+      .driver_base_handle_o(execution_gate_base_handle)
   );
 
   edr_byte_stream_tunnel #(
@@ -61,13 +52,10 @@ module test_tunnel (
       .clk_i(clk_o),
 
       .context_handle_i(context_handle_o),
-      .context_initialized_event_i(context_initialized_event_o),
 
       .byte_stream_handle_i(pipe_handle),
-      .byte_stream_initialized_event_i(pipe_initialized_event),
 
-      .driver_handles_i({execution_gate_base_handle, driver_base_handle_i}),
-      .driver_initialized_events_i({execution_gate_initialized_event_o, driver_initialized_event_i})
+      .driver_handles_i({execution_gate_base_handle, driver_base_handle_i})
   );
 
   initial begin
