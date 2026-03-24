@@ -14,8 +14,7 @@ module edr_jtag #(
 
     input chandle execution_gate_handle_i,
 
-    output chandle jtag_handle_o,
-    output chandle driver_base_handle_o
+    output chandle jtag_handle_o
 );
   import "DPI-C" function chandle edr_PullJtag_new(
     input chandle ctx,
@@ -38,8 +37,6 @@ module edr_jtag #(
     input byte src_bits[BYTES_PER_BATCH],
     input int unsigned num_bits
   );
-
-  import "DPI-C" function chandle edr_PullJtag_CastToBase(input chandle jtag);
 
   import "DPI-C" function void edr_ExecutionGate_StallIfNeeded(
     input chandle exe_gate,
@@ -120,7 +117,6 @@ module edr_jtag #(
     wait (execution_gate_handle_i != 0);
 
     jtag_handle_o = edr_PullJtag_new(context_handle_i, NAME, execution_gate_handle_i);
-    driver_base_handle_o = edr_PullJtag_CastToBase(jtag_handle_o);
   end
 
   final begin

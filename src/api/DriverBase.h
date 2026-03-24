@@ -16,6 +16,8 @@ public:
   edr::DriverBase *Base() { return m_driver; }
 #endif
 
+  virtual ~DriverBase() = default;
+
   bool IsValid() { return nullptr != m_driver; }
 
 protected:

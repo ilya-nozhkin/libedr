@@ -11,8 +11,7 @@ module edr_execution_gate #(
 ) (
     input chandle context_handle_i,
 
-    output chandle execution_gate_handle_o,
-    output chandle driver_base_handle_o
+    output chandle execution_gate_handle_o
 );
   import "DPI-C" function chandle edr_ExecutionGate_new(
     input chandle ctx,
@@ -26,8 +25,6 @@ module edr_execution_gate #(
     input int unsigned mode
   );
 
-  import "DPI-C" function chandle edr_ExecutionGate_CastToBase(input chandle exe_gate);
-
   initial begin
     execution_gate_mode_t effective_mode;
     execution_gate_handle_o = 0;
@@ -35,7 +32,6 @@ module edr_execution_gate #(
     wait (context_handle_i != 0);
 
     execution_gate_handle_o = edr_ExecutionGate_new(context_handle_i, NAME);
-    driver_base_handle_o = edr_ExecutionGate_CastToBase(execution_gate_handle_o);
 
     effective_mode = execution_gate_mode_t
         '(edr_ExecutionGate_SetMode(execution_gate_handle_o, int'(INITIAL_MODE)));

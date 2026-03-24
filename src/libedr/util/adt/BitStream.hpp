@@ -215,7 +215,7 @@ template <class T> struct std::formatter<edr::BitStream<T>, char> {
     size_t num_bits = stream.GetNumBits();
 
     it = std::format_to(it, "({} {}) ", num_bits,
-                        reverse ? "reversed" : "forward");
+                        reverse ? "lsb-right" : "lsb-left");
 
     if (reverse) {
       while (num_bits != 0) {

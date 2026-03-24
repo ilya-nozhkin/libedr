@@ -71,7 +71,7 @@ struct PutTDI {
 
   template <StructureFormatter F> void Format(F &fmt) {
     fmt.Name("TDI <-");
-    fmt.Value("{}", Bits());
+    fmt.Value("{:r}", Bits());
   }
 
   template <class T>
@@ -115,7 +115,7 @@ struct PutTDIGetTDO {
 
   template <StructureFormatter F> void Format(F &fmt) {
     fmt.Name("TDI-TDO <-");
-    fmt.Value("{}", Bits());
+    fmt.Value("{:r}", Bits());
   }
 
   template <class T>
@@ -141,7 +141,7 @@ struct PutTDIGetTDO {
     BitStream<uint32_t> Bits() { return vss::Get<0>(*this).Stream(num_put); }
 
     template <StructureFormatter F> void Format(F &fmt) {
-      fmt.Value("{}", Bits());
+      fmt.Value("{:r}", Bits());
     }
 
     template <class T>

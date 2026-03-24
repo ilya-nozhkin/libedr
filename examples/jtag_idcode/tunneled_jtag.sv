@@ -14,14 +14,9 @@ module tunneled_jtag (
     input  tdo_i
 );
   chandle context_handle;
-
   chandle execution_gate_handle;
-  chandle execution_gate_base_handle;
-
   chandle pipe_handle;
-
   chandle jtag_handle;
-  chandle jtag_base_handle;
 
   function static string get_pipe_name();
     string pipe_name;
@@ -48,8 +43,7 @@ module tunneled_jtag (
   edr_execution_gate edr_execution_gate_instance (
       .context_handle_i(context_handle),
 
-      .execution_gate_handle_o(execution_gate_handle),
-      .driver_base_handle_o(execution_gate_base_handle)
+      .execution_gate_handle_o(execution_gate_handle)
   );
 
   edr_jtag #(
@@ -65,11 +59,8 @@ module tunneled_jtag (
       .tdo_i(tdo_i),
 
       .context_handle_i(context_handle),
-
       .execution_gate_handle_i(execution_gate_handle),
-
-      .jtag_handle_o(jtag_handle),
-      .driver_base_handle_o(jtag_base_handle)
+      .jtag_handle_o(jtag_handle)
   );
 
   edr_byte_stream_tunnel #(
@@ -78,10 +69,8 @@ module tunneled_jtag (
       .clk_i(clk_i),
 
       .context_handle_i(context_handle),
-
       .byte_stream_handle_i(pipe_handle),
-
-      .driver_handles_i({execution_gate_base_handle, jtag_base_handle})
+      .driver_handles_i({execution_gate_handle, jtag_handle})
   );
 
 endmodule

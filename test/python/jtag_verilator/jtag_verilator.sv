@@ -6,7 +6,6 @@ module jtag_verilator ();
   chandle execution_gate_handle;
 
   chandle jtag_handle;
-  chandle jtag_base_handle;
 
   wire    tck;
   wire    tms;
@@ -39,10 +38,8 @@ module jtag_verilator ();
       .clk_o(clk),
 
       .context_handle_o(context_handle),
-
       .execution_gate_handle_o(execution_gate_handle),
-
-      .driver_base_handle_i(jtag_base_handle)
+      .driver_handle_i(jtag_handle)
   );
 
   edr_jtag #(
@@ -57,11 +54,8 @@ module jtag_verilator ();
       .tdo_i(tdo),
 
       .context_handle_i(context_handle),
-
       .execution_gate_handle_i(execution_gate_handle),
-
-      .jtag_handle_o(jtag_handle),
-      .driver_base_handle_o(jtag_base_handle)
+      .jtag_handle_o(jtag_handle)
   );
 
   tap_top tap_top_instance (
