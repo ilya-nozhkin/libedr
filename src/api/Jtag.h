@@ -12,14 +12,6 @@
 #include "libedr/driver/jtag/PullJtag.h"
 #include "libedr/util/adt/BitStream.hpp"
 
-enum class JtagMode : uint32_t {
-  StallIfNoRequestsAndIdle = 0, // Default
-  ForceStallIfNoRequsts = 1,
-  ForceStall = 2,
-  NoStall = 3,
-  Terminated = 4,
-};
-
 class JtagTransaction {
   TRANSACTION_BODY(Jtag);
 
@@ -33,6 +25,9 @@ public:
   }
 
   void PutTDI(const std::byte *src_bits, uint32_t num_bits, uint32_t last_tms) {
+    if (!m_builder)
+      return;
+
     m_builder->Add<edr::PutTDI>(
         edr::BitStream<const uint8_t>(
             reinterpret_cast<const uint8_t *>(src_bits), num_bits),
@@ -41,6 +36,9 @@ public:
 
   void PutTDIGetTDO(const std::byte *src_bits, uint32_t num_bits,
                     uint32_t last_tms) {
+    if (!m_builder)
+      return;
+
     m_builder->Add<edr::PutTDIGetTDO>(
         edr::BitStream<const uint8_t>(
             reinterpret_cast<const uint8_t *>(src_bits), num_bits),

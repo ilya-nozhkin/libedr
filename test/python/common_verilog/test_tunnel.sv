@@ -7,15 +7,11 @@ module test_tunnel (
     output reg clk_o,
 
     output chandle context_handle_o,
-
     output chandle execution_gate_handle_o,
-
-    input chandle driver_base_handle_i
+    input  chandle driver_handle_i
 );
 
   chandle pipe_handle;
-
-  chandle execution_gate_base_handle;
 
   function static string get_pipe_name();
     string pipe_name;
@@ -42,8 +38,7 @@ module test_tunnel (
   edr_execution_gate edr_execution_gate_instance (
       .context_handle_i(context_handle_o),
 
-      .execution_gate_handle_o(execution_gate_handle_o),
-      .driver_base_handle_o(execution_gate_base_handle)
+      .execution_gate_handle_o(execution_gate_handle_o)
   );
 
   edr_byte_stream_tunnel #(
@@ -55,7 +50,7 @@ module test_tunnel (
 
       .byte_stream_handle_i(pipe_handle),
 
-      .driver_handles_i({execution_gate_base_handle, driver_base_handle_i})
+      .driver_handles_i({execution_gate_handle_o, driver_handle_i})
   );
 
   initial begin

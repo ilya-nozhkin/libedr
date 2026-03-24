@@ -157,7 +157,7 @@ public:                                                                        \
   DRIVER_NAME &operator=(DRIVER_NAME &&) = delete;                             \
   MOVE_CONSTRUCTOR(DRIVER_NAME)                                                \
                                                                                \
-  virtual ~DRIVER_NAME() = default;                                            \
+  ~DRIVER_NAME() override = default;                                           \
                                                                                \
   DRIVER_NAME##Transaction Initiate(const char *name) {                        \
     if (nullptr == m_driver || nullptr == name)                                \
@@ -172,7 +172,5 @@ public:                                                                        \
   SELF(DRIVER_NAME)                                                            \
                                                                                \
   void Terminate() { Self()->Terminate(); }                                    \
-                                                                               \
-  DriverBase *CastToBase() { return static_cast<DriverBase *>(this); }
 
 #endif
