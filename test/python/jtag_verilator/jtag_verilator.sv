@@ -1,5 +1,6 @@
 module jtag_verilator ();
   wire    clk;
+  wire reset;
 
   chandle context_handle;
 
@@ -36,6 +37,7 @@ module jtag_verilator ();
 
   test_tunnel test_tunnel_instance (
       .clk_o(clk),
+      .resetn_o(reset),
 
       .context_handle_o(context_handle),
       .execution_gate_handle_o(execution_gate_handle),
@@ -84,7 +86,7 @@ module jtag_verilator ();
   );
 
   initial begin
-    if (&{1'b0, tdo_padoe, shift_dr,  pause_dr,  update_dr,  capture_dr,  extest_select,  sample_preload_select,  mbist_select,  debug_select,  internal_tdo}) begin
+    if (&{1'b0, tdo_padoe, shift_dr,  pause_dr,  update_dr,  capture_dr,  extest_select,sample_preload_select,  mbist_select,  debug_select,  internal_tdo, reset}) begin
     end
   end
 

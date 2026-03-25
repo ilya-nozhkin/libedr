@@ -65,6 +65,7 @@ function(add_python_tests_from_current_directory)
   endforeach()
 endfunction()
 
+add_subdirectory(apb_verilator)
 add_subdirectory(jtag_verilator)
 add_subdirectory(tcp_socket_loopback)
 

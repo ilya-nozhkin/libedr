@@ -121,7 +121,7 @@ class Example:
         # xact.NextN(2)
         xact.Next()
         xact.Next()
-        if xact.Fail():
+        if xact.ActionFail():
             raise Exception(xact.ErrorMessage())
 
         # Now we can extract TDO into a preallocated buffer.

@@ -46,7 +46,7 @@ public:
   }
 
   uint32_t GetNumBitsPut() {
-    if (!InitCheckIterator())
+    if (ActionFail())
       return 0;
 
     return (*m_iterator)
@@ -56,7 +56,7 @@ public:
   }
 
   uint32_t GetTDO(std::byte *dest_bits, uint32_t max_num_bits) {
-    if (!InitCheckIterator())
+    if (ActionFail())
       return 0;
 
     auto *put_tdi_get_tdo_out = (*m_iterator)->Out<edr::PutTDIGetTDO>();

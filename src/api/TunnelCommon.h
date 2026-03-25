@@ -2,6 +2,7 @@
 #define LIBEDR_API_TUNNELCOMMON_H
 
 #define ALL_DRIVERS(DO)                                                        \
+  DO(APB)                                                               \
   DO(ByteStream)                                                               \
   DO(ExecutionGate)                                                            \
   DO(Jtag)

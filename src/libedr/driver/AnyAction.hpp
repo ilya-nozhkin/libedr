@@ -2,6 +2,7 @@
 #define LIBEDR_DRIVER_ANYACTION_HPP
 
 #include "libedr/driver/UniqueIDs.hpp"
+#include "libedr/driver/apb/APBAction.hpp"
 #include "libedr/driver/bytestream/ByteStreamAction.hpp"
 #include "libedr/driver/execution_gate/ExecutionGateAction.hpp"
 #include "libedr/driver/jtag/JtagAction.hpp"
@@ -47,6 +48,7 @@ template <class... TPairs> struct ActionByDriverImpl {
 using ActionByDriver =
     ActionByDriverImpl<Pair<DriverID::ByteStream, ByteStreamAction>,
                        Pair<DriverID::Jtag, JtagAction>,
+                       Pair<DriverID::APB, APBAction>,
                        Pair<DriverID::ExecutionGate, ExecutionGateAction>>;
 // ===========================
 

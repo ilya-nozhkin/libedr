@@ -33,7 +33,7 @@ public:
   }
 
   uint32_t GetNumWrittenBytes() {
-    if (!InitCheckIterator())
+    if (ActionFail())
       return 0;
 
     auto [_, out] = (*m_iterator)->As<edr::WriteBytes>();
@@ -44,7 +44,7 @@ public:
   }
 
   uint32_t GetReadBytes(std::byte *dest, uint32_t size) {
-    if (!InitCheckIterator())
+    if (ActionFail())
       return 0;
 
     auto [_, out] = (*m_iterator)->As<edr::ReadBytes>();

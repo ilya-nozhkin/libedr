@@ -51,7 +51,7 @@ module tunneled_jtag (
       .NAME("JTAG")
   ) edr_jtag_instance (
       .clk_i(clk_i),
-      .system_is_idle_i(1),
+      .system_is_idle_i(system_is_idle_i),
 
       .tck_o(tck_o),
       .tms_o(tms_o),

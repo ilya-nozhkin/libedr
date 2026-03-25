@@ -30,7 +30,7 @@ public:
   }
 
   ExecutionGateMode GetEffectiveMode() {
-    if (!InitCheckIterator())
+    if (ActionFail())
       return ExecutionGateMode::StallIfNoRequestsAndIdle;
 
     auto [_, out] = (*m_iterator)->As<edr::SetExecutionGateMode>();

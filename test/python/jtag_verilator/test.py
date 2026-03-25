@@ -17,7 +17,7 @@ class TestJTAGVerilator(EDRTestCase):
         xact.Do()
 
         xact.Next()
-        self.assertFalse(xact.Fail(), xact.ErrorMessage())
+        self.assertFalse(xact.ActionFail(), xact.ErrorMessage())
 
         tdo = bytearray(4)
         xact.GetTDO(tdo, 32)
