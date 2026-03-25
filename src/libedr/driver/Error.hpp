@@ -173,16 +173,36 @@ struct CauseInvalidArgument {
   CauseInvalidArgument(CauseInvalidArgument &&) = delete;
 };
 
+struct CauseTimeoutInCycles {
+  static inline constexpr auto g_id = CauseID::CauseTimeoutInCycles;
+
+  uint32_t num_cycles;
+
+  CauseTimeoutInCycles(uint32_t num_cycles) : num_cycles(num_cycles) {}
+
+  template <StructureFormatter F> void Format(F &fmt) {
+    fmt.Value("Timeout after {} cycles", num_cycles);
+  }
+};
+
+struct CauseTargetError {
+  static inline constexpr auto g_id = CauseID::CauseTargetError;
+
+  template <StructureFormatter F> void Format(F &fmt) {
+    fmt.Value("The target indicated an error without details");
+  }
+};
+
 struct CauseIDGetter {
   template <class C> consteval CauseID operator()() { return C::g_id; }
 };
 
 using ActionOrUnknown = vss::Variant<AnyAction, ActionID>;
 
-using Cause = vss::VariantBase<CauseID, CauseIDGetter, CauseUnsupportedAction,
-                               CauseAllocationFailure, CauseStringMessage,
-                               CauseNestedError, CauseTerminated, CauseErrno,
-                               CauseInvalidArgument>;
+using Cause = vss::VariantBase<
+    CauseID, CauseIDGetter, CauseUnsupportedAction, CauseAllocationFailure,
+    CauseStringMessage, CauseNestedError, CauseTerminated, CauseErrno,
+    CauseInvalidArgument, CauseTimeoutInCycles, CauseTargetError>;
 
 struct ActionError final {
   using Payload = vss::Payload<ActionOrUnknown, Cause>;

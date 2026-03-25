@@ -5,6 +5,7 @@
 
 module test_tunnel (
     output reg clk_o,
+    output reg resetn_o,
 
     output chandle context_handle_o,
     output chandle execution_gate_handle_o,
@@ -65,6 +66,12 @@ module test_tunnel (
       clk_o = 0;
       #10;
     end
+  end
+
+  initial begin
+    resetn_o = 0;
+    #50
+    resetn_o = 1;
   end
 
 endmodule

@@ -1,0 +1,6 @@
+target_sources(libedr PRIVATE
+  ${CMAKE_CURRENT_LIST_DIR}/APB.hpp
+  ${CMAKE_CURRENT_LIST_DIR}/APBAction.hpp
+  ${CMAKE_CURRENT_LIST_DIR}/PullAPB.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/PullAPB.h
+)

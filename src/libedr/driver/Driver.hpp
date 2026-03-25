@@ -195,7 +195,9 @@ public:
   TransactionStatus &operator=(TransactionStatus &&from) {
     if (m_error_buffer) {
       m_error_buffer->Clear();
-      m_storage.owner->Free(std::move(*m_error_buffer));
+      if (m_storage.owner != nullptr)
+        m_storage.owner->Free(std::move(*m_error_buffer));
+
       m_error_buffer.reset();
     }
 
@@ -214,7 +216,9 @@ public:
   ~TransactionStatus() {
     if (m_error_buffer) {
       m_error_buffer->Clear();
-      m_storage.owner->Free(std::move(*m_error_buffer));
+      if (m_storage.owner != nullptr)
+        m_storage.owner->Free(std::move(*m_error_buffer));
+
       m_error_buffer.reset();
     }
   }

@@ -37,6 +37,18 @@ public:                                                                        \
                                                                                \
   bool Fail() { return !Success(); }                                           \
                                                                                \
+  bool ActionSuccess() {                                                       \
+    if (!m_task || !(*m_task) || !m_task->done())                              \
+      return false;                                                            \
+                                                                               \
+    if (!m_iterator.has_value())                                               \
+      m_iterator.emplace((*m_task)->begin());                                  \
+                                                                               \
+    return *m_iterator != (*m_task)->Complete().end();                         \
+  }                                                                            \
+                                                                               \
+  bool ActionFail() { return !ActionSuccess(); }                               \
+                                                                               \
   const char *ErrorMessage() {                                                 \
     if (!m_task)                                                               \
       return "Not scheduled";                                                  \
@@ -76,7 +88,7 @@ public:                                                                        \
   }                                                                            \
                                                                                \
   void Next() {                                                                \
-    if (!InitCheckIterator())                                                  \
+    if (ActionFail())                                                          \
       return;                                                                  \
                                                                                \
     ++(*m_iterator);                                                           \
@@ -88,6 +100,8 @@ public:                                                                        \
   }                                                                            \
                                                                                \
   void Reuse(const char *name) {                                               \
+    m_iterator.reset();                                                        \
+                                                                               \
     auto [new_cookie, persistent_name] =                                       \
         m_context_sp->GetNameGuard().AllocateName(name);                       \
                                                                                \
@@ -111,16 +125,6 @@ private:                                                                       \
                            edr::DRIVER_NAME::Builder &&builder)                \
       : m_context_sp(context_sp), m_driver(driver),                            \
         m_name_cookie(name_cookie), m_builder(std::move(builder)) {}           \
-                                                                               \
-  bool InitCheckIterator() {                                                   \
-    if (!m_task || !(*m_task) || !m_task->done())                              \
-      return false;                                                            \
-                                                                               \
-    if (!m_iterator.has_value())                                               \
-      m_iterator.emplace((*m_task)->begin());                                  \
-                                                                               \
-    return *m_iterator != (*m_task)->end();                                    \
-  }                                                                            \
                                                                                \
   DRIVER_NAME##Transaction() = default;                                        \
                                                                                \
@@ -171,6 +175,6 @@ public:                                                                        \
                                                                                \
   SELF(DRIVER_NAME)                                                            \
                                                                                \
-  void Terminate() { Self()->Terminate(); }                                    \
+  void Terminate() { Self()->Terminate(); }
 
 #endif

@@ -1,3 +1,6 @@
 [submodule "third_party/freecores/jtag"]
 	path = third_party/freecores/jtag
 	url = git@github.com:freecores/jtag.git
+[submodule "third_party/apb"]
+	path = third_party/apb
+	url = https://github.com/iammituraj/apb.git
