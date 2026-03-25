@@ -14,7 +14,7 @@ Transactions consist of sequences of actions that can be processed in batches.
 Supported interfaces and tunnels
 --------------------------------
 
-Currently, the only supported interface is JTAG.
+Currently, the only supported interfaces are JTAG and APB.
 
 Tunnelling is possible via any bi-directional byte stream, TCP sockets and Unix domain sockets are supported out of the box.
 
