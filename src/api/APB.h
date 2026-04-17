@@ -74,7 +74,7 @@ public:
   }
 
   uint32_t PushResults(const uint8_t *status_src, const uint32_t *data_src,
-                       size_t num_results) {
+                       unsigned num_results) {
     return static_cast<edr::PullAPB &>(*m_driver).PushResults(
         reinterpret_cast<const edr::PullAPB::PushedStatus *>(status_src),
         data_src, num_results);
