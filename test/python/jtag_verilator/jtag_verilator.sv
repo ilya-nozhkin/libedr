@@ -1,12 +1,13 @@
 module jtag_verilator ();
-  wire    clk;
+  wire clk;
   wire reset;
 
-  chandle context_handle;
+  edr_Error error;
+  edr_Context ctx;
+  edr_ExecutionGate execution_gate;
+  edr_ByteStreamTunnel tunnel;
 
-  chandle execution_gate_handle;
-
-  chandle jtag_handle;
+  edr_Jtag jtag;
 
   wire    tck;
   wire    tms;
@@ -39,14 +40,13 @@ module jtag_verilator ();
       .clk_o(clk),
       .resetn_o(reset),
 
-      .context_handle_o(context_handle),
-      .execution_gate_handle_o(execution_gate_handle),
-      .driver_handle_i(jtag_handle)
+      .error_o(error),
+      .context_o(ctx),
+      .execution_gate_o(execution_gate),
+      .tunnel_o(tunnel)
   );
 
-  edr_jtag #(
-      .BITS_PER_BATCH(16)
-  ) edr_jtag_instance (
+  edr_jtag edr_jtag_instance (
       .clk_i(clk),
       .system_is_idle_i(1),
 
@@ -55,9 +55,9 @@ module jtag_verilator ();
       .tdi_o(tdi),
       .tdo_i(tdo),
 
-      .context_handle_i(context_handle),
-      .execution_gate_handle_i(execution_gate_handle),
-      .jtag_handle_o(jtag_handle)
+      .context_i(ctx),
+      .execution_gate_i(execution_gate),
+      .jtag_o(jtag)
   );
 
   tap_top tap_top_instance (
@@ -86,8 +86,20 @@ module jtag_verilator ();
   );
 
   initial begin
-    if (&{1'b0, tdo_padoe, shift_dr,  pause_dr,  update_dr,  capture_dr,  extest_select,sample_preload_select,  mbist_select,  debug_select,  internal_tdo, reset}) begin
+    wait (jtag != null);
+    tunnel.RegisterDriver(jtag);
+
+    tunnel.StartServer(error);
+    if (error.Fail()) begin
+      $display("Failed to start serving the byte stream tunnel: ", error.Message());
+      $finish(1);
     end
+
+    while (tunnel.IsAlive()) begin
+      @(posedge clk);
+    end
+
+    $finish(0);
   end
 
 endmodule

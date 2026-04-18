@@ -1,22 +1,25 @@
+#!/bin/bash
+
 SCRIPT_DIR=$(dirname $0)
 
-EDR_INSTALL=${SCRIPT_DIR}/../../install
-EDR_INSTALL=$(realpath ${EDR_INSTALL})
+if [[ ! -v EDR_INSTALL_DIR ]]; then
+  echo "EDR_INSTALL_DIR environment variable is not set. Point it to an EDR installation directory."
+  exit
+fi
 
 APB=${SCRIPT_DIR}/../../third_party/apb
 
 verilator \
   --timing --binary \
+  --top testbench \
+  -I${APB} \
+  ${EDR_INSTALL_DIR}/lib/libcedr.so \
+  ${EDR_INSTALL_DIR}/verilog/edr_sv_api.sv \
+  ${APB}/apb_slave.sv \
+  ${SCRIPT_DIR}/testbench.sv \
+  -j $(nproc) \
   -Wall -CFLAGS -std=c++20 \
   -Wno-WIDTHTRUNC \
   -Wno-WIDTHEXPAND \
   -Wno-UNUSEDPARAM \
-  -Wno-UNUSEDSIGNAL \
-  -j $(nproc) \
-  --top testbench \
-  -I${EDR_INSTALL}/verilog \
-  -I${APB} \
-  ${SCRIPT_DIR}/testbench.sv \
-  ${SCRIPT_DIR}/tunneled_apb.sv \
-  ${APB}/apb_slave.sv \
-  ${EDR_INSTALL}/lib/libcedr.so
+  -Wno-UNUSEDSIGNAL

@@ -128,7 +128,6 @@ class SVType:
 @dataclass
 class SVDPIFunction:
     c_func: CFunction
-    sv_name: str
     sv_ret_type: SVType
     sv_args: List[Tuple[str, SVType]]
 
@@ -233,14 +232,13 @@ class CAPI:
 
 
 class SVAPI:
+    ARRAY_SIZE = 32
+
     FUNC_NAME_REGEX = r"^(edr_[^_]+)_(\w+)$"
 
-    def __init__(
-        self, capi: CAPI, sv_out: io.TextIOWrapper, c_out: io.TextIOWrapper
-    ) -> None:
+    def __init__(self, capi: CAPI, sv_out: io.TextIOWrapper) -> None:
         self.capi = capi
         self.sv_out = sv_out
-        self.c_out = c_out
 
         self.classes: Dict[str, SVClass] = {}
 
@@ -283,12 +281,23 @@ class SVAPI:
                 dest.add(name)
 
     def dump_sv_api(self):
-        self.c_out.write(self.capi.source)
-        self.c_out.write(os.linesep)
-        self.c_out.write(f"#include <svdpi.h>{os.linesep}{os.linesep}")
+        self.sv_out.write(f"/* verilator lint_off DECLFILENAME */{os.linesep}")
+        self.dump_constants()
 
         self.dump_enums()
         self.dump_classes()
+
+        self.sv_out.write(f"/* verilator lint_on DECLFILENAME */{os.linesep}")
+
+    def dump_constants(self):
+        constants_list = [("EDR_ARRAY_SIZE", SVAPI.ARRAY_SIZE)]
+        constants = f",{os.linesep}".join(
+            f"  {key} = {value}" for key, value in constants_list
+        )
+
+        self.sv_out.write(f"typedef enum {{{os.linesep}")
+        self.sv_out.write(f"{constants}{os.linesep}")
+        self.sv_out.write(f"}} edr_constants_t;{os.linesep}{os.linesep}")
 
     def dump_enums(self):
         for c_enum in self.capi.enums:
@@ -339,12 +348,12 @@ class SVAPI:
             self.sv_out.write(os.linesep)
 
         self.sv_out.write(
-            f"  function new({sv_class.c_name}_handle handle);{os.linesep}"
+            f"  function new({sv_class.c_name}_handle external_handle);{os.linesep}"
         )
         if sv_class.parent is None:
-            self.sv_out.write(f"    this.handle = handle;{os.linesep}")
+            self.sv_out.write(f"    this.handle = external_handle;{os.linesep}")
         else:
-            self.sv_out.write(f"    super.new(handle);{os.linesep}")
+            self.sv_out.write(f"    super.new(external_handle);{os.linesep}")
 
         self.sv_out.write(f"  endfunction{os.linesep}")
         self.sv_out.write(os.linesep)
@@ -381,7 +390,7 @@ class SVAPI:
 
     def dump_dpi_function(self, dpi_func: SVDPIFunction):
         self.sv_out.write('import "DPI-C" function ')
-        self.sv_out.write(f"{dpi_func.sv_ret_type.type_name} {dpi_func.sv_name}(")
+        self.sv_out.write(f"{dpi_func.sv_ret_type.type_name} {dpi_func.c_func.name}(")
 
         first = True
         for arg_name, arg_type in dpi_func.sv_args:
@@ -400,80 +409,9 @@ class SVAPI:
             self.sv_out.write(arg_name)
 
             if arg_type.flags.is_array:
-                self.sv_out.write("[]")
+                self.sv_out.write(f"[{SVAPI.ARRAY_SIZE}]")
 
         self.sv_out.write(f");{os.linesep}")
-
-        if dpi_func.c_func.name != dpi_func.sv_name:
-            self.dump_sv_forwarder(dpi_func)
-
-    def dump_sv_forwarder(self, dpi_func: SVDPIFunction):
-        ret_type_def = self.forward_sv_type_def(dpi_func.sv_ret_type)
-        forwarded_args = ", ".join(
-            f"{self.forward_sv_type_def(sv_type)} {name}"
-            for name, sv_type in dpi_func.sv_args
-        )
-
-        self.c_out.write(
-            f"{ret_type_def} {dpi_func.sv_name}({forwarded_args}) {{{os.linesep}"
-        )
-
-        forwarded_values = ", ".join(
-            self.forward_sv_arg(sv_type, name) for name, sv_type in dpi_func.sv_args
-        )
-
-        the_call = f"{dpi_func.c_func.name}({forwarded_values})"
-
-        if dpi_func.sv_ret_type.c_type == CBasicType.CVoid:
-            self.c_out.write(f"  {the_call};{os.linesep}")
-        else:
-            self.c_out.write(f"  return {the_call};{os.linesep}")
-
-        self.c_out.write(f"}}{os.linesep}{os.linesep}")
-
-    def forward_sv_type_def(self, sv_type: SVType):
-        if sv_type.flags.is_array:
-            return "svOpenArrayHandle"
-
-        return self.forward_c_type_def(sv_type.c_type)
-
-    def forward_sv_arg(self, sv_type: SVType, arg_name: str):
-        if sv_type.flags.is_array:
-            target_type = self.forward_c_type_def(sv_type.c_type)
-            return f"({target_type})svGetArrayPtr({arg_name})"
-
-        return arg_name
-
-    def forward_c_type_def(self, c_type: CType):
-        match c_type:
-            case CBasicType.CVoid:
-                return "void"
-            case CBasicType.CInt:
-                return "int"
-            case CBasicType.CChar:
-                return "char"
-            case CBasicType.CBool:
-                return "bool"
-            case CBasicType.CShort:
-                return "short"
-
-            case CUnsignedType(subtype):
-                return f"unsigned {self.forward_c_type_def(subtype)}"
-
-            case CEnumType(name):
-                return f"enum {name}"
-
-            case CConstType(subtype):
-                return f"const {self.forward_c_type_def(subtype)}"
-
-            case CStructType(name):
-                return name
-
-            case CPointerType(pointee):
-                return f"{self.forward_c_type_def(pointee)} *"
-
-            case _:
-                raise Exception(f"Unforwarded type: {c_type}")
 
     def dump_method(self, sv_class: SVClass, dpi_func: SVDPIFunction) -> bool:
         if len(dpi_func.sv_args) == 0:
@@ -496,12 +434,15 @@ class SVAPI:
         is_class_method: bool,
         prefix: str,
     ):
+        ret_type_name = dpi_func.sv_ret_type.type_name
+
         ret_contains_struct = dpi_func.sv_ret_type.flags.contains_struct
-        ret_type_name = (
-            ret_contains_struct
-            if ret_contains_struct
-            else dpi_func.sv_ret_type.type_name
-        )
+        if ret_contains_struct:
+            ret_type_name = ret_contains_struct
+        
+        ret_is_bool = dpi_func.sv_ret_type.c_type == CBasicType.CBool
+        if ret_is_bool:
+            ret_type_name = "logic"
 
         args = dpi_func.sv_args[1:] if is_class_method else dpi_func.sv_args
 
@@ -509,14 +450,19 @@ class SVAPI:
 
         lifetime = ""
         if not is_class_method:
-            lifetime = "static "
+            lifetime = "automatic "
 
         self.sv_out.write(f"{prefix}function {lifetime}{ret_type_name} {method_name}(")
         for arg_name, arg_type in args:
+            arg_type_name = arg_type.type_name
+
             arg_contains_struct = arg_type.flags.contains_struct
-            arg_type_name = (
-                arg_contains_struct if arg_contains_struct else arg_type.type_name
-            )
+            if arg_contains_struct:
+                arg_type_name = arg_contains_struct
+            
+            arg_is_bool = arg_type.c_type == CBasicType.CBool
+            if arg_is_bool:
+                arg_type_name = "logic"
 
             if not first:
                 self.sv_out.write(", ")
@@ -533,7 +479,7 @@ class SVAPI:
             self.sv_out.write(arg_name)
 
             if arg_type.flags.is_array:
-                self.sv_out.write("[]")
+                self.sv_out.write(f"[{SVAPI.ARRAY_SIZE}]")
 
         self.sv_out.write(f");{os.linesep}")
 
@@ -541,6 +487,9 @@ class SVAPI:
             name, sv_type = arg
             if sv_type.flags.contains_struct:
                 return f"{name}.handle"
+
+            if sv_type.c_type == CBasicType.CBool:
+                return f"{name} ? 1 : 0"
 
             return name
 
@@ -550,7 +499,7 @@ class SVAPI:
 
         passed_args = ", ".join(passed_arg_list)
 
-        the_call = f"{dpi_func.sv_name}({passed_args})"
+        the_call = f"{dpi_func.c_func.name}({passed_args})"
 
         if ret_type_name == "void":
             self.sv_out.write(f"{prefix}  {the_call};{os.linesep}")
@@ -559,6 +508,8 @@ class SVAPI:
                 f"{prefix}  {ret_contains_struct} res = new({the_call});{os.linesep}"
             )
             self.sv_out.write(f"{prefix}  return res;{os.linesep}")
+        elif ret_is_bool:
+            self.sv_out.write(f"{prefix}  return 0 != {the_call};{os.linesep}")
         else:
             self.sv_out.write(f"{prefix}  return {the_call};{os.linesep}")
 
@@ -567,13 +518,8 @@ class SVAPI:
     def map_function(self, c_func: CFunction) -> SVDPIFunction:
         ret_type = self.map_type(c_func.return_type)
         mapped_args = [(arg.name, self.map_type(arg.type)) for arg in c_func.args]
-        sv_name = c_func.name
 
-        has_arrays = any(sv_type.flags.is_array for _, sv_type in mapped_args)
-        if has_arrays:
-            sv_name = f"{c_func.name}_sv_forward"
-
-        return SVDPIFunction(c_func, sv_name, ret_type, mapped_args)
+        return SVDPIFunction(c_func, ret_type, mapped_args)
 
     def map_type(self, c_type: CType) -> SVType:
         match c_type:
@@ -628,9 +574,9 @@ class SVAPI:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("c_api_header")
-    parser.add_argument("sv_api_output")
-    parser.add_argument("sv_dpi_c_output")
+    parser.add_argument("--c-api-header", required=True)
+    parser.add_argument("--verilog-drivers-dir", required=True)
+    parser.add_argument("--sv-api-output", required=True)
 
     args = parser.parse_args()
 
@@ -639,12 +585,15 @@ def main():
     capi = CAPI()
     capi.parse_c_api_header(header_data)
 
-    with (
-        Path(args.sv_api_output).open("w") as sv_out,
-        Path(args.sv_dpi_c_output).open("w") as c_out,
-    ):
-        svapi = SVAPI(capi, sv_out, c_out)
+    sv_files = Path(args.verilog_drivers_dir).rglob("*.sv")
+
+    with Path(args.sv_api_output).open("w") as sv_out:
+        svapi = SVAPI(capi, sv_out)
         svapi.dump_sv_api()
+
+        for sv_file in sv_files:
+            sv_out.write(sv_file.read_text())
+            sv_out.write(os.linesep)
 
 
 if __name__ == "__main__":

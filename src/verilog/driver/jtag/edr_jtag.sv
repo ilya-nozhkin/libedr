@@ -1,5 +1,4 @@
 module edr_jtag #(
-    parameter int BITS_PER_BATCH = 128,
     parameter string NAME = "JTAG"
 ) (
     input clk_i,
@@ -10,41 +9,16 @@ module edr_jtag #(
     output tdi_o,
     input  tdo_i,
 
-    input chandle context_handle_i,
+    input edr_Context context_i,
+    input edr_ExecutionGate execution_gate_i,
 
-    input chandle execution_gate_handle_i,
-
-    output chandle jtag_handle_o
+    output edr_Jtag jtag_o
 );
-  import "DPI-C" function chandle edr_PullJtag_new(
-    input chandle ctx,
-    input string  name,
-    input chandle exe_gate
-  );
-
-  import "DPI-C" function void edr_PullJtag_delete(input chandle jtag);
-
-  import "DPI-C" function int unsigned edr_PullJtag_PullTMSTDI(
-    input chandle jtag,
-    output byte tms_dest[BYTES_PER_BATCH],
-    input int unsigned max_num_tms,
-    output byte tdi_dest[BYTES_PER_BATCH],
-    input int unsigned max_num_tdi
-  );
-
-  import "DPI-C" function int unsigned edr_PullJtag_PushTDO(
-    input chandle jtag,
-    input byte src_bits[BYTES_PER_BATCH],
-    input int unsigned num_bits
-  );
-
-  import "DPI-C" function void edr_ExecutionGate_StallIfNeeded(
-    input chandle exe_gate,
-    input byte target_is_idle
-  );
-
+  parameter int BYTES_PER_BATCH = EDR_ARRAY_SIZE;
+  parameter int BITS_PER_BATCH = BYTES_PER_BATCH * 8;
   parameter int LAST_BIT = BITS_PER_BATCH - 1;
-  parameter int BYTES_PER_BATCH = BITS_PER_BATCH / 8;
+
+  edr_PullJtag pull_jtag;
 
   reg [LAST_BIT:0] tms;
   reg [LAST_BIT:0] tdi;
@@ -79,7 +53,7 @@ module edr_jtag #(
       tdo_buf[bytes] = tdo[bits+:8];
     end
 
-    num_pushed_bits = edr_PullJtag_PushTDO(jtag_handle_o, tdo_buf, num_bits_to_capture);
+    num_pushed_bits = pull_jtag.PushTDO(tdo_buf, num_bits_to_capture);
     if (num_pushed_bits != num_bits_to_capture) begin
       $display("The number of pushed TDO bits does not equal to to the number of requested bits");
       $finish(0);
@@ -87,11 +61,9 @@ module edr_jtag #(
 
     bit_to_capture <= 0;
 
-    edr_ExecutionGate_StallIfNeeded(execution_gate_handle_i,
-                                    system_is_idle_i ? byte'(1) : byte'(0));
+    execution_gate_i.StallIfNeeded(system_is_idle_i ? byte'(1) : byte'(0));
 
-    new_num_bits =
-        edr_PullJtag_PullTMSTDI(jtag_handle_o, tms_buf, BITS_PER_BATCH, tdi_buf, BITS_PER_BATCH);
+    new_num_bits = pull_jtag.PullTMSTDI(tms_buf, BITS_PER_BATCH, tdi_buf, BITS_PER_BATCH);
 
     num_pending_bits <= new_num_bits;
     num_bits_to_capture <= new_num_bits;
@@ -111,22 +83,22 @@ module edr_jtag #(
     num_pending_bits = 0;
     num_bits_to_capture = 0;
     bit_to_capture = 0;
-    jtag_handle_o = 0;
 
-    wait (context_handle_i != 0);
-    wait (execution_gate_handle_i != 0);
+    wait (context_i != null);
+    wait (execution_gate_i != null);
 
-    jtag_handle_o = edr_PullJtag_new(context_handle_i, NAME, execution_gate_handle_i);
+    pull_jtag = make_edr_PullJtag(context_i, NAME, execution_gate_i);
+    jtag_o = pull_jtag;
   end
 
   final begin
-    if (jtag_handle_o != 0) begin
-      edr_PullJtag_delete(jtag_handle_o);
+    if (pull_jtag != null) begin
+      pull_jtag.delete();
     end
   end
 
   always @(negedge clk_i) begin
-    if (jtag_handle_o != 0) begin
+    if (pull_jtag != null) begin
       if (num_pending_bits == 0 || num_pending_bits == 1) ExchangeData();
       else begin
         tms <= {1'b0, tms[LAST_BIT:1]};
