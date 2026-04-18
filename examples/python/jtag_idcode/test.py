@@ -7,7 +7,7 @@ EDR_INSTALL_DIR = os.environ.get("EDR_INSTALL_DIR")
 if EDR_INSTALL_DIR is None:
     print(
         "EDR_INSTALL_DIR environment variable is not set. "
-        "Point it to an EDR installation directory."
+        "Point it to a libedr installation directory."
     )
     sys.exit(1)
 
@@ -73,10 +73,10 @@ class Example:
 
         # And now we can start requesting handles of remote drivers.
         # Each driver is given a name (see the NAME parameter specified
-        # during the instantiation of edr_apb module in tunneled_apb.sv).
+        # during the instantiation of edr_jtag module in tunneled_jtag.sv).
         # It is possible to get a handle of a tunneled driver that would
         # have the exact same API as if it was a local instance.
-        self.apb: edr.APB = self.tunnel.FindAPB("APB")
+        self.jtag: edr.Jtag = self.tunnel.FindJtag("JTAG")
 
     def terminate(self):
         # The model keeps running while the tunnel is open, so we need to
@@ -84,25 +84,23 @@ class Example:
         self.tunnel.Terminate()
         self.model_process.wait()
 
-    def do_test(self):
+    def read_idcode(self):
         # This function shows an example of a multi-action transaction.
         # A transaction is initiated by a driver object. Each transaction
         # must be given a name which is used for logging and error reporting.
-        xact: edr.APBTransaction = self.apb.Initiate("Write regs")
+        xact: edr.JtagTransaction = self.jtag.Initiate("reset-and-read-IDCODE")
 
         # Each of the following calls adds one action to the transaction, but
         # nothing is getting sent to the model yet.
 
-        # Write at addresses 0x0 and 0x8
-        xact.Write(0x0, 0x11223344)
-        xact.Write(0x8, 0x55667788)
+        # Move the TAP to the reset state regardless of its current state.
+        xact.PutTMS(0b11111.to_bytes(2, "little"), 5)
 
-        # Wait 6 ticks of pclk without initiating any transfers
-        xact.SkipCycles(6)
+        # Move to Shift-DR state, TMS bits are applied from right to left.
+        xact.PutTMS(0b0010.to_bytes(2, "little"), 4)
 
-        # Read from 0x0 and 0x8
-        xact.Read(0x0)
-        xact.Read(0x8)
+        # Shift 32 zeros to TDI and get 32 bits from TDO.
+        xact.PutTDIGetTDO(b"\0" * 4, 32, 1)
 
         # The "Schedule" method finally sends the entire transaction to the
         # target. But it does not block the current thread. It is possible
@@ -126,35 +124,24 @@ class Example:
         # We are interested in the TDO which was the third action, so
         # let's advance the iterator twice and check the status.
         # There is a shortcut for multiple "Next"s:
-        # xact.NextN(3)
-        xact.Next()
+        # xact.NextN(2)
         xact.Next()
         xact.Next()
         if xact.ActionFail():
             raise Exception(xact.ErrorMessage())
 
-        # Now we can extract data captured by the "Read" actions.
-        data0 = xact.GetReadData()
+        # Now we can extract TDO into a preallocated buffer.
+        tdo = bytearray(4)
+        xact.GetTDO(tdo, 32)
 
-        # In this example, each action status is checked explicitly, but it is
-        # also possible to check whether the entire transaction was completed
-        # successfully or if at least one action failed using:
-        # xact.Success()
-        # xact.Fail()
-        xact.Next()
-        if xact.ActionFail():
-            raise Exception(xact.ErrorMessage())
-
-        data8 = xact.GetReadData()
-
-        print(f"0x0: {hex(data0)}")
-        print(f"0x8: {hex(data8)}")
+        idcode = int.from_bytes(tdo, "little")
+        print(f"IDCODE is {hex(idcode)}, should be 0x149511c3")
 
 
 if __name__ == "__main__":
     try:
         example = Example()
-        example.do_test()
+        example.read_idcode()
         example.terminate()
     except Exception as e:
         print(f"{e}", file=sys.stderr)

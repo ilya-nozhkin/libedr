@@ -3,11 +3,11 @@
 SCRIPT_DIR=$(dirname $0)
 
 if [[ ! -v EDR_INSTALL_DIR ]]; then
-  echo "EDR_INSTALL_DIR environment variable is not set. Point it to an EDR installation directory."
+  echo "EDR_INSTALL_DIR environment variable is not set. Point it to a libedr installation directory."
   exit
 fi
 
-FREECORES_JTAG=${SCRIPT_DIR}/../../third_party/freecores/jtag
+FREECORES_JTAG=${SCRIPT_DIR}/../../../third_party/freecores/jtag
 
 verilator \
   --timing --binary \
