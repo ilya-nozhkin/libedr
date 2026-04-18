@@ -1,6 +1,15 @@
 module testbench ();
   reg    clk;
 
+  edr_Error error;
+  edr_Context ctx;
+  edr_ExecutionGate execution_gate;
+
+  edr_ByteStream pipe;
+  edr_ByteStreamTunnel tunnel;
+
+  edr_Jtag jtag;
+
   wire    tck;
   wire    tms;
   wire    tdi;
@@ -24,14 +33,24 @@ module testbench ();
   wire    bs_chain_tdi = 0;
   wire    mbist_tdi = 0;
 
-  tunneled_jtag tunneled_jtag_instance (
+  function static string get_pipe_name();
+    string pipe_name;
+    $value$plusargs("edr-pipe=%s", pipe_name);
+    return pipe_name;
+  endfunction
+
+  edr_jtag edr_jtag_instance (
       .clk_i(clk),
       .system_is_idle_i(1),
 
       .tck_o(tck),
       .tms_o(tms),
       .tdi_o(tdi),
-      .tdo_i(tdo)
+      .tdo_i(tdo),
+
+      .context_i(ctx),
+      .execution_gate_i(execution_gate),
+      .jtag_o(jtag)
   );
 
   tap_top tap_top_instance (
@@ -60,9 +79,42 @@ module testbench ();
   );
 
   initial begin
-    if (&{1'b0, tdo_padoe, shift_dr,  pause_dr,  update_dr,  capture_dr,  extest_select,  sample_preload_select,  mbist_select,  debug_select,  internal_tdo}) begin
+    // $dumpfile("waves.vcd");
+    // $dumpvars(0);
+
+    error = make_edr_Error();
+
+    ctx   = make_edr_Context(edr_LogLevel_TRACE);
+    ctx.AddFile("edr_rtl.log");
+
+    execution_gate = make_edr_ExecutionGate(ctx, "ExecutionGate");
+
+    pipe = make_edr_ByteStream_ConnectNamedPipe(ctx, get_pipe_name(), error);
+    if (error.Fail()) begin
+      $display("Failed to connect to named pipe '%s': %s", get_pipe_name(), error.Message());
+      $finish(1);
     end
 
+    tunnel = make_edr_ByteStreamTunnel(ctx, pipe);
+    tunnel.RegisterDriver(execution_gate);
+
+    wait (jtag != null);
+    tunnel.RegisterDriver(jtag);
+
+    tunnel.StartServer(error);
+    if (error.Fail()) begin
+      $display("Failed to start serving the byte stream tunnel: ", error.Message());
+      $finish(1);
+    end
+
+    while (tunnel.IsAlive()) begin
+      @(posedge clk);
+    end
+
+    $finish(0);
+  end
+
+  initial begin
     clk = 0;
 
     while (1) begin

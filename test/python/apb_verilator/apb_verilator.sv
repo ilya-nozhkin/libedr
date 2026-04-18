@@ -1,9 +1,12 @@
 module apb_verilator ();
   wire clk;
 
-  chandle context_handle;
-  chandle execution_gate_handle;
-  chandle apb_handle;
+  edr_Error error;
+  edr_Context ctx;
+  edr_ExecutionGate execution_gate;
+  edr_ByteStreamTunnel tunnel;
+
+  edr_APB apb;
 
   wire presetn;
 
@@ -23,15 +26,16 @@ module apb_verilator ();
       .clk_o(clk),
       .resetn_o(presetn),
 
-      .context_handle_o(context_handle),
-      .execution_gate_handle_o(execution_gate_handle),
-      .driver_handle_i(apb_handle)
+      .error_o(error),
+      .context_o(ctx),
+      .execution_gate_o(execution_gate),
+      .tunnel_o(tunnel)
   );
 
   edr_apb #(
       .ADDR_WIDTH(16),
       .DATA_WIDTH(32)
-  ) edr_jtag_instance (
+  ) edr_apb_instance (
       .system_is_idle_i(1),
 
       .pclk(clk),
@@ -47,9 +51,9 @@ module apb_verilator ();
       .prdata (prdata),
       .pslverr(pslverr),
 
-      .context_handle_i(context_handle),
-      .execution_gate_handle_i(execution_gate_handle),
-      .apb_handle_o(apb_handle)
+      .context_i(ctx),
+      .execution_gate_i(execution_gate),
+      .apb_o(apb)
   );
 
   apb_slave #(
@@ -73,4 +77,20 @@ module apb_verilator ();
       .i_hw_sts(1)
   );
 
+  initial begin
+    wait (apb != null);
+    tunnel.RegisterDriver(apb);
+
+    tunnel.StartServer(error);
+    if (error.Fail()) begin
+      $display("Failed to start serving the byte stream tunnel: ", error.Message());
+      $finish(1);
+    end
+
+    while (tunnel.IsAlive()) begin
+      @(posedge clk);
+    end
+
+    $finish(0);
+  end
 endmodule

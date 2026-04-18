@@ -3,17 +3,23 @@ import os
 import sys
 from pathlib import Path
 
-# Adding the Python API to sys.path to be able to import it.
-SCRIPT_DIR = Path(__file__).parent.absolute()
-EDR_PACKAGE_DIR = SCRIPT_DIR.parent.parent / "install" / "python"
+EDR_INSTALL_DIR = os.environ.get("EDR_INSTALL_DIR")
+if EDR_INSTALL_DIR is None:
+    print(
+        "EDR_INSTALL_DIR environment variable is not set. "
+        "Point it to an EDR installation directory."
+    )
+    sys.exit(1)
 
+# Adding the Python API to sys.path to be able to import it.
+EDR_PACKAGE_DIR = Path(EDR_INSTALL_DIR) / "python"
 sys.path.append(os.fspath(EDR_PACKAGE_DIR))
 
 import edr
 
 # libcedr.so should be visible from LD_LIBRARY_PATH so that the model
 # built by Verilator can link dynamically to the C API.
-EDR_SHLIB_DIR = EDR_PACKAGE_DIR.parent / "lib"
+EDR_SHLIB_DIR = Path(EDR_INSTALL_DIR) / "lib"
 os.environ["LD_LIBRARY_PATH"] = os.pathsep.join(
     [os.fspath(EDR_SHLIB_DIR), os.environ.get("LD_LIBRARY_PATH", "")]
 )

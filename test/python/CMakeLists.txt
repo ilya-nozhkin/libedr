@@ -1,5 +1,7 @@
 add_custom_target(python_test_dependencies)
 
+set(EDR_TEST_COMMON_VERILOG ${CMAKE_CURRENT_LIST_DIR}/common_verilog)
+
 function(add_verilated_model TARGET_NAME)
   cmake_parse_arguments(
     ARG
@@ -9,11 +11,22 @@ function(add_verilated_model TARGET_NAME)
     ${ARGN}
   )
 
-  set(EDR_C_API_LIBRARY ${EDR_API_BUILD_DIR}/libcedr.so)
-
   add_custom_target(${TARGET_NAME}
-    COMMAND ${EDR_VERILATOR_EXECUTABLE} --timing --trace --binary -Wall -CFLAGS -std=c++20 --top ${TARGET_NAME} ${ARG_ARGS} ${ARG_SOURCES} ${EDR_C_API_LIBRARY}
-    DEPENDS ${ARG_SOURCES}
+    COMMAND ${EDR_VERILATOR_EXECUTABLE}
+      --timing --trace --binary
+      -Wall -CFLAGS -std=c++20
+      --top ${TARGET_NAME}
+      -I${EDR_TEST_COMMON_VERILOG}
+      ${EDR_API_BUILD_DIR}/libcedr.so
+      ${EDR_API_BUILD_DIR}/edr_sv_api.sv
+      ${EDR_TEST_COMMON_VERILOG}/test_tunnel.sv
+      ${ARG_ARGS}
+      ${ARG_SOURCES}
+    DEPENDS
+      ${ARG_SOURCES}
+      ${EDR_API_BUILD_DIR}/libcedr.so
+      ${EDR_API_BUILD_DIR}/edr_sv_api.sv
+      ${EDR_TEST_COMMON_VERILOG}/test_tunnel.sv
   )
 
   add_dependencies(python_test_dependencies ${TARGET_NAME})

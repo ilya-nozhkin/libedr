@@ -2,7 +2,6 @@ module edr_apb #(
     parameter int ADDR_WIDTH = 32,
     parameter int DATA_WIDTH = 32,
     parameter int NUM_PSELS = 1,
-    parameter int COMMANDS_PER_BATCH = 16,
     parameter int TIMEOUT = 100,
     parameter string NAME = "APB"
 ) (
@@ -21,37 +20,13 @@ module edr_apb #(
     input [DATA_WIDTH-1:0] prdata,
     input pslverr,
 
-    input  chandle context_handle_i,
-    input  chandle execution_gate_handle_i,
-    output chandle apb_handle_o
+    input edr_Context context_i,
+    input edr_ExecutionGate execution_gate_i,
+    output edr_APB apb_o
 );
-  import "DPI-C" function chandle edr_PullAPB_new(
-    input chandle ctx,
-    input string  name,
-    input chandle exe_gate
-  );
+  parameter int COMMANDS_PER_BATCH = EDR_ARRAY_SIZE;
 
-  import "DPI-C" function void edr_PullAPB_delete(input chandle apb);
-
-  import "DPI-C" function int unsigned edr_PullAPB_PullCommands(
-    input chandle apb,
-    output byte commands_dst[COMMANDS_PER_BATCH],
-    output int unsigned addr_dst[COMMANDS_PER_BATCH],
-    output int unsigned data_dst[COMMANDS_PER_BATCH],
-    input int unsigned max_num_commands
-  );
-
-  import "DPI-C" function int unsigned edr_PullAPB_PushResults(
-    input chandle apb,
-    input byte status_src[COMMANDS_PER_BATCH],
-    input int unsigned data_src[COMMANDS_PER_BATCH],
-    input int unsigned num_results
-  );
-
-  import "DPI-C" function void edr_ExecutionGate_StallIfNeeded(
-    input chandle exe_gate,
-    input byte target_is_idle
-  );
+  edr_PullAPB pull_apb;
 
   typedef enum logic [6:0] {
     CMD_NOP = 0,
@@ -114,9 +89,7 @@ module edr_apb #(
 
   // [Derived statements]
 
-  logic ready_to_read_or_write =
-    state == S_OPERATING
-    || state == S_ERROR && beginning_of_xact;
+  logic ready_to_read_or_write = state == S_OPERATING || state == S_ERROR && beginning_of_xact;
 
   logic transfer;
   assign transfer =
@@ -209,17 +182,15 @@ module edr_apb #(
     int unsigned num_new_commands;
     int unsigned num_pushed_results;
 
-    num_pushed_results = edr_PullAPB_PushResults(apb_handle_o, statuses, output_data, num_results);
+    num_pushed_results = pull_apb.PushResults(statuses, output_data, num_results);
     if (num_pushed_results != num_results) begin
       $display("The number of pushed results does not equal to the number of requested commands");
       $finish(0);
     end
 
-    edr_ExecutionGate_StallIfNeeded(execution_gate_handle_i,
-                                    system_is_idle_i ? byte'(1) : byte'(0));
+    execution_gate_i.StallIfNeeded(system_is_idle_i ? byte'(1) : byte'(0));
 
-    num_new_commands = edr_PullAPB_PullCommands(apb_handle_o, commands, input_addrs, input_data,
-                                                COMMANDS_PER_BATCH);
+    num_new_commands = pull_apb.PullCommands(commands, input_addrs, input_data, COMMANDS_PER_BATCH);
 
     num_commands <= num_new_commands;
     num_results <= num_new_commands;
@@ -242,38 +213,41 @@ module edr_apb #(
       captured_output_data[i] = 0;
     end
 
-    wait (context_handle_i != 0);
-    wait (execution_gate_handle_i != 0);
+    wait (context_i != null);
+    wait (execution_gate_i != null);
 
-    apb_handle_o = edr_PullAPB_new(context_handle_i, NAME, execution_gate_handle_i);
+    pull_apb = make_edr_PullAPB(context_i, NAME, execution_gate_i);
+    apb_o = pull_apb;
   end
 
   final begin
-    if (apb_handle_o != 0) begin
-      edr_PullAPB_delete(apb_handle_o);
+    if (pull_apb != null) begin
+      pull_apb.delete();
     end
   end
 
   always @(posedge pclk) begin
-    state <= next_state;
+    if (pull_apb != null) begin
+      state <= next_state;
 
-    if (command_done) begin
-      if (CMD_SET_PSEL == current_command) psel_index <= current_data;
+      if (command_done) begin
+        if (CMD_SET_PSEL == current_command) psel_index <= current_data;
 
-      if (num_commands <= 1) ExchangeData();
-      else begin
-        captured_statuses[current_command_index] <= current_status;
-        captured_output_data[current_command_index] <= current_output;
+        if (num_commands <= 1) ExchangeData();
+        else begin
+          captured_statuses[current_command_index] <= current_status;
+          captured_output_data[current_command_index] <= current_output;
 
-        current_command_index <= current_command_index + 1;
-        num_commands <= num_commands - 1;
+          current_command_index <= current_command_index + 1;
+          num_commands <= num_commands - 1;
+        end
+
+        cycles_left_until_timeout <= TIMEOUT;
+      end else if (skipping) begin
+        input_data[current_command_index] <= input_data[current_command_index] - 1;
+      end else if (state == S_WAITING) begin
+        cycles_left_until_timeout <= cycles_left_until_timeout - 1;
       end
-
-      cycles_left_until_timeout <= TIMEOUT;
-    end else if (skipping) begin
-      input_data[current_command_index] <= input_data[current_command_index] - 1;
-    end else if (state == S_WAITING) begin
-      cycles_left_until_timeout <= cycles_left_until_timeout - 1;
     end
   end
 endmodule

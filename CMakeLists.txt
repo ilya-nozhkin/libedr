@@ -42,7 +42,6 @@ execute_process(
 
 # [PROJECT]
 
-set(EDR_VERILOG_DIR ${CMAKE_CURRENT_LIST_DIR}/src/verilog)
 set(EDR_THIRD_PARTY_DIR ${CMAKE_CURRENT_LIST_DIR}/third_party)
 
 add_subdirectory(src)
