@@ -424,8 +424,33 @@ class SVAPI:
         assert dpi_func.c_func.name.startswith(f"{sv_class.c_name}_")
         method_name = dpi_func.c_func.name[len(sv_class.c_name) + 1 :]
 
+        is_transaction = sv_class.c_name.endswith("Transaction")
+
+        if is_transaction and method_name == "Join":
+            self.dump_the_join()
+            return True
+
+        if is_transaction and method_name == "Do":
+            self.dump_the_do()
+            return True
+
         self.dump_sv_function(dpi_func, method_name, True, "  ")
         return True
+
+    def dump_the_join(self):
+        self.sv_out.write(f"  task Join(ref logic clk);{os.linesep}")
+        self.sv_out.write(f"    while (!this.Done()) begin{os.linesep}")
+        self.sv_out.write(f"      @(negedge clk);{os.linesep}")
+        self.sv_out.write(f"    end{os.linesep}")
+        self.sv_out.write(f"  endtask;{os.linesep}{os.linesep}")
+
+    def dump_the_do(self):
+        self.sv_out.write(f"  task Do(ref logic clk);{os.linesep}")
+        self.sv_out.write(f"    logic scheduled = this.Schedule();{os.linesep}")
+        self.sv_out.write(f"    if (scheduled) begin{os.linesep}")
+        self.sv_out.write(f"      this.Join(clk);{os.linesep}")
+        self.sv_out.write(f"    end{os.linesep}")
+        self.sv_out.write(f"  endtask;{os.linesep}{os.linesep}")
 
     def dump_sv_function(
         self,
@@ -439,7 +464,7 @@ class SVAPI:
         ret_contains_struct = dpi_func.sv_ret_type.flags.contains_struct
         if ret_contains_struct:
             ret_type_name = ret_contains_struct
-        
+
         ret_is_bool = dpi_func.sv_ret_type.c_type == CBasicType.CBool
         if ret_is_bool:
             ret_type_name = "logic"
@@ -459,7 +484,7 @@ class SVAPI:
             arg_contains_struct = arg_type.flags.contains_struct
             if arg_contains_struct:
                 arg_type_name = arg_contains_struct
-            
+
             arg_is_bool = arg_type.c_type == CBasicType.CBool
             if arg_is_bool:
                 arg_type_name = "logic"
