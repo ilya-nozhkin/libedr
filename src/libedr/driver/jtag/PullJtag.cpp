@@ -69,7 +69,7 @@ PullJtag::TMSTDIGenerator PullJtag::GenerateTMSTDI() {
 
   auto try_write = [&accumulated](BitStream<BitStorage> &data_dest,
                                   BitStream<BitStorage> &filler_dest,
-                                  BitStream<const uint32_t> &data_source,
+                                  BitStream<uint32_t> &data_source,
                                   auto filler_source) -> bool {
     if (filler_dest.GetNumBits() < data_dest.GetNumBits())
       data_dest.Crop(filler_dest.GetNumBits());

@@ -11,6 +11,7 @@
 #include <format>
 #include <span>
 #include <string_view>
+#include <tuple>
 #include <type_traits>
 
 namespace edr {
@@ -212,6 +213,11 @@ struct VariantBase {
   operator bool() const { return IsValid(); }
 
 public:
+  using AnyOption = std::tuple_element_t<0, std::tuple<Options...>>;
+
+  template <class F>
+  using VisitorReturnType = std::invoke_result_t<F, AnyOption &>;
+
   template <class T> T *As() {
     if (DiscriminantGetter{}.template operator()<T>() != discriminant)
       return nullptr;
@@ -223,9 +229,18 @@ public:
     return reinterpret_cast<T *>(ptr);
   }
 
-  template <class F> bool Visit(F &&func) {
-    return ForOption<DiscriminantGetter, Options...>(
-        discriminant, [&]<class O>() { func(*As<O>()); });
+  template <class F, class R = VisitorReturnType<F>>
+  std::conditional_t<std::is_same_v<R, void>, bool, std::optional<R>>
+  Visit(F &&func) {
+    if constexpr (std::is_same_v<R, void>)
+      return ForOption<DiscriminantGetter, Options...>(
+          discriminant, [&]<class O>() { func(*As<O>()); });
+    else {
+      std::optional<R> result;
+      ForOption<DiscriminantGetter, Options...>(
+          discriminant, [&]<class O>() { result.emplace(func(*As<O>())); });
+      return result;
+    }
   }
 
   template <class... SubOptions>
