@@ -21,9 +21,7 @@ struct PutTMS {
   template <class T>
   PutTMS(const BitStream<T> &bits) : num_bits(bits.GetNumBits()) {}
 
-  BitStream<const uint32_t> Bits() {
-    return vss::Get<0>(*this).Stream(num_bits);
-  }
+  BitStream<uint32_t> Bits() { return vss::Get<0>(*this).Stream(num_bits); }
 
   template <StructureFormatter F> void Format(F &fmt) {
     fmt.Name("TMS <-");
@@ -65,9 +63,10 @@ struct PutTDI {
   PutTDI(const BitStream<T> &bits, uint32_t last_tms)
       : num_bits(bits.GetNumBits()), last_tms(last_tms) {}
 
-  BitStream<const uint32_t> Bits() {
-    return vss::Get<0>(*this).Stream(num_bits);
-  }
+  PutTDI(uint32_t num_bits, uint32_t last_tms)
+      : num_bits(num_bits), last_tms(last_tms) {}
+
+  BitStream<uint32_t> Bits() { return vss::Get<0>(*this).Stream(num_bits); }
 
   template <StructureFormatter F> void Format(F &fmt) {
     fmt.Name("TDI <-");
@@ -80,6 +79,11 @@ struct PutTDI {
     Payload::Emplace(os, bits);
   }
 
+  static void EmplacePayload(vss::OutputStream auto &os, uint32_t num_bits,
+                             uint32_t last_tms) {
+    Payload::Emplace(os, num_bits);
+  }
+
   std::optional<size_t> SizeOfPayload(Payload &payload, size_t max_size) {
     return payload.Size(max_size, num_bits);
   }
@@ -88,6 +92,8 @@ struct PutTDI {
     uint32_t num_put;
 
     template <class T> Out(const BitStream<T> &bits, uint32_t last_tms) {}
+
+    Out(uint32_t num_bits, uint32_t last_tms) {}
 
     template <StructureFormatter F> void Format(F &fmt) {
       fmt.Value("{}", num_put);
@@ -109,9 +115,10 @@ struct PutTDIGetTDO {
   PutTDIGetTDO(const BitStream<T> &bits, uint32_t last_tms)
       : num_bits(bits.GetNumBits()), last_tms(last_tms) {}
 
-  BitStream<const uint32_t> Bits() {
-    return vss::Get<0>(*this).Stream(num_bits);
-  }
+  PutTDIGetTDO(uint32_t num_bits, uint32_t last_tms)
+      : num_bits(num_bits), last_tms(last_tms) {}
+
+  BitStream<uint32_t> Bits() { return vss::Get<0>(*this).Stream(num_bits); }
 
   template <StructureFormatter F> void Format(F &fmt) {
     fmt.Name("TDI-TDO <-");
@@ -124,6 +131,11 @@ struct PutTDIGetTDO {
     Payload::Emplace(os, bits);
   }
 
+  static void EmplacePayload(vss::OutputStream auto &os, uint32_t num_bits,
+                             uint32_t last_tms) {
+    Payload::Emplace(os, num_bits);
+  }
+
   std::optional<size_t> SizeOfPayload(Payload &payload, size_t max_size) {
     return payload.Size(max_size, num_bits);
   }
@@ -133,6 +145,8 @@ struct PutTDIGetTDO {
     using Payload = vss::Payload<vss::DependentBits<uint32_t>>;
 
     template <class T> Out(const BitStream<T> &bits, uint32_t last_tms) {}
+
+    Out(uint32_t num_bits, uint32_t last_tms) {}
 
     BitStream<uint32_t> Bits(size_t num_bits) {
       return vss::Get<0>(*this).Stream(num_bits);
@@ -148,6 +162,11 @@ struct PutTDIGetTDO {
     static void EmplacePayload(vss::OutputStream auto &os,
                                const BitStream<T> &bits, uint32_t last_tms) {
       Payload::Emplace(os, bits.GetNumBits());
+    }
+
+    static void EmplacePayload(vss::OutputStream auto &os, uint32_t num_bits,
+                               uint32_t last_tms) {
+      Payload::Emplace(os, num_bits);
     }
 
     std::optional<size_t> SizeOfPayload(Payload &payload, size_t max_size,

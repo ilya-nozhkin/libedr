@@ -16,6 +16,7 @@
 #include <format>
 #include <memory_resource>
 #include <optional>
+#include <type_traits>
 #include <utility>
 
 namespace edr {
@@ -165,6 +166,14 @@ public:
            m_storage.outs.HadAllocationFailure();
   }
 
+  template <class T> T *Get(const TypedActionPosition<T> &pos) {
+    if (HadAllocationFailure())
+      return nullptr;
+
+    auto in = m_storage.ins.From(pos.position.first);
+    return reinterpret_cast<T *>(in.Get());
+  }
+
   const DependentTransactions &GetDependent() const { return m_dependent; }
 
 private:
@@ -228,6 +237,11 @@ public:
     template <IsAction TTAction> friend class TransactionInProgress;
 
   public:
+    template <class F, class... Args>
+    using VisitorReturnType =
+        std::invoke_result_t<F, typename TAction::AnyOption &,
+                             typename TAction::AnyOption::Out &, Args...>;
+
     ActionOutVariant(ActionPosition pos, TAction *action, void *out)
         : m_pos(pos), m_action(action), m_out(out) {}
 
@@ -243,13 +257,22 @@ public:
       return m_action->discriminant;
     }
 
-    template <class F> bool Visit(F &&func) {
+    template <class F, class... Args, class R = VisitorReturnType<F, Args...>>
+    std::conditional_t<std::is_same_v<R, void>, bool, std::optional<R>>
+    Visit(F &&func, Args &&...args) {
       if (nullptr == m_action || nullptr == m_out)
-        return false;
+        return {};
 
-      return m_action->Visit([&]<class A>(A &action) {
-        func(action, *reinterpret_cast<A::Out *>(m_out));
-      });
+      if constexpr (std::is_same_v<R, void>)
+        return m_action->Visit([&]<class A>(A &action) {
+          func(action, *reinterpret_cast<A::Out *>(m_out),
+               std::forward<Args>(args)...);
+        });
+      else
+        return m_action->Visit([&]<class A>(A &action) {
+          return func(action, *reinterpret_cast<A::Out *>(m_out),
+                      std::forward<Args>(args)...);
+        });
     }
 
     template <class T> std::pair<T *, typename T::Out *> As() {
@@ -312,9 +335,10 @@ public:
         return *this;
       }
 
-      bool recognized = action->Visit([&]<class A>(A &action) {
-        vss::Extract<typename A::Out>(out_is, action);
-      });
+      bool recognized =
+          static_cast<bool>(action->Visit([&]<class A>(A &action) {
+            vss::Extract<typename A::Out>(out_is, action);
+          }));
 
       if (recognized)
         m_pos = {in_is.Tell(), out_is.Tell()};
@@ -495,6 +519,12 @@ public:
     next_it++;
     m_status.m_first_incomplete = next_it.m_pos;
   }
+
+  void Undo(const ActionOutVariant &action_out) {
+    m_status.m_first_incomplete = action_out.m_pos;
+  }
+
+  void Undo(const Iterator &it) { m_status.m_first_incomplete = it.m_pos; }
 
   template <class TCause, class... Args> void Fail(Args &&...args) {
     if (m_status)

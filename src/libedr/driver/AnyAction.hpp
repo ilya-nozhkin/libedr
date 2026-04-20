@@ -6,6 +6,7 @@
 #include "libedr/driver/bytestream/ByteStreamAction.hpp"
 #include "libedr/driver/execution_gate/ExecutionGateAction.hpp"
 #include "libedr/driver/jtag/JtagAction.hpp"
+#include "libedr/driver/jtag/JtagChainAction.hpp"
 
 namespace edr {
 
@@ -49,6 +50,7 @@ using ActionByDriver =
     ActionByDriverImpl<Pair<DriverID::ByteStream, ByteStreamAction>,
                        Pair<DriverID::Jtag, JtagAction>,
                        Pair<DriverID::APB, APBAction>,
+                       Pair<DriverID::JtagChain, JtagChainAction>,
                        Pair<DriverID::ExecutionGate, ExecutionGateAction>>;
 // ===========================
 

@@ -14,6 +14,7 @@ class CBasicType(Enum):
     CChar = "char"
     CBool = "bool"
     CShort = "short"
+    CLongLong = "long long"
 
 
 @dataclass
@@ -558,6 +559,8 @@ class SVAPI:
                 return SVType("byte", SVTypeFlags(), c_type)
             case CBasicType.CShort:
                 return SVType("shortint", SVTypeFlags(), c_type)
+            case CBasicType.CLongLong:
+                return SVType("longint", SVTypeFlags(), c_type)
 
             case CUnsignedType(subtype):
                 map_sub = self.map_type(subtype)

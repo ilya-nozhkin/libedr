@@ -5,6 +5,7 @@
 #include "libedr/driver/AnyAction.hpp"
 #include "libedr/driver/TransactionBuffer.hpp"
 #include "libedr/driver/UniqueIDs.hpp"
+#include "libedr/driver/jtag/JtagChainAction.hpp"
 #include "libedr/util/vss/VSS.hpp"
 #include "libedr/util/vss/VSSPayloads.hpp"
 
@@ -94,7 +95,7 @@ struct CauseNestedError {
 };
 
 struct CauseTerminated {
-  static inline constexpr auto g_id = CauseID::CauseTerminated;
+  static inline constexpr auto g_id = CauseID::Terminated;
 
   using Payload = vss::Payload<vss::String>;
 
@@ -118,7 +119,7 @@ struct CauseTerminated {
 };
 
 struct CauseErrno {
-  static inline constexpr auto g_id = CauseID::CauseErrno;
+  static inline constexpr auto g_id = CauseID::Errno;
 
   int32_t return_value;
   int32_t errno_value;
@@ -150,7 +151,7 @@ struct CauseErrno {
 };
 
 struct CauseInvalidArgument {
-  static inline constexpr auto g_id = CauseID::CauseInvalidArgument;
+  static inline constexpr auto g_id = CauseID::InvalidArgument;
 
   using Payload = vss::Payload<vss::String>;
 
@@ -174,7 +175,7 @@ struct CauseInvalidArgument {
 };
 
 struct CauseTimeoutInCycles {
-  static inline constexpr auto g_id = CauseID::CauseTimeoutInCycles;
+  static inline constexpr auto g_id = CauseID::TimeoutInCycles;
 
   uint32_t num_cycles;
 
@@ -186,7 +187,7 @@ struct CauseTimeoutInCycles {
 };
 
 struct CauseTargetError {
-  static inline constexpr auto g_id = CauseID::CauseTargetError;
+  static inline constexpr auto g_id = CauseID::TargetError;
 
   template <StructureFormatter F> void Format(F &fmt) {
     fmt.Value("The target indicated an error without details");
@@ -202,7 +203,9 @@ using ActionOrUnknown = vss::Variant<AnyAction, ActionID>;
 using Cause = vss::VariantBase<
     CauseID, CauseIDGetter, CauseUnsupportedAction, CauseAllocationFailure,
     CauseStringMessage, CauseNestedError, CauseTerminated, CauseErrno,
-    CauseInvalidArgument, CauseTimeoutInCycles, CauseTargetError>;
+    CauseInvalidArgument, CauseTimeoutInCycles, CauseTargetError,
+    CauseInvalidJtagTapID, CauseInvalidJtagState, CauseUnstableJtagState,
+    CauseIRLengthTooBig>;
 
 struct ActionError final {
   using Payload = vss::Payload<ActionOrUnknown, Cause>;

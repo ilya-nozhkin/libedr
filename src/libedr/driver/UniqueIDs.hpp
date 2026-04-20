@@ -10,6 +10,7 @@ enum class DriverID : uint32_t {
   Jtag = 1000,
   ExecutionGate = 2000,
   APB = 3000,
+  JtagChain = 4000,
 };
 
 constexpr uint32_t ActionOffset(DriverID driver_id) {
@@ -37,6 +38,15 @@ enum class ActionID : uint32_t {
   APBWrite = 1 + ActionOffset(DriverID::APB),
   APBRead = 2 + ActionOffset(DriverID::APB),
   APBSetPSEL = 3 + ActionOffset(DriverID::APB),
+
+  // JtagChain
+  JCForgetChainStructure = 1 + ActionOffset(DriverID::JtagChain),
+  JCSetIRLength = 2 + ActionOffset(DriverID::JtagChain),
+  JCGoToState = 3 + ActionOffset(DriverID::JtagChain),
+  JCSelectTAP = 4 + ActionOffset(DriverID::JtagChain),
+  JCWriteIR = 5 + ActionOffset(DriverID::JtagChain),
+  JCWriteDR = 6 + ActionOffset(DriverID::JtagChain),
+  JCShiftDR = 7 + ActionOffset(DriverID::JtagChain),
 };
 
 enum class CauseID : uint32_t {
@@ -45,11 +55,15 @@ enum class CauseID : uint32_t {
   StringMessage = 2,
   NestedError = 3,
   TooMuchData = 4,
-  CauseTerminated = 5,
-  CauseErrno = 6,
-  CauseInvalidArgument = 7,
-  CauseTimeoutInCycles = 8,
-  CauseTargetError = 9,
+  Terminated = 5,
+  Errno = 6,
+  InvalidArgument = 7,
+  TimeoutInCycles = 8,
+  TargetError = 9,
+  InvalidJtagTapID = 10,
+  InvalidJtagState = 11,
+  UnstableJtagState = 12,
+  IRLengthTooBig = 13,
 };
 
 } // namespace edr

@@ -52,7 +52,8 @@ public:
     return (*m_iterator)
         ->Visit([]<class T>(const auto & /*action*/, const T &out) {
           return out.num_put;
-        });
+        })
+        .value_or(0);
   }
 
   uint32_t GetTDO(std::byte *dest_bits, uint32_t max_num_bits) {
