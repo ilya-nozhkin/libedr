@@ -350,6 +350,9 @@ public:
   }
 
   bool FlushTDI(const SourceIterator &send) {
+    if (m_current_tdi_operation == ActionID::InvalidAction)
+      return true;
+
     if (nullptr != m_jbuilder) {
       auto dest = [&]() -> std::optional<BitStream<uint32_t>> {
         if (m_current_tdi_operation == ActionID::JCShiftDR) {
@@ -468,6 +471,9 @@ public:
       }
     }
 
+    m_state.state =
+        m_state.state == JCState::ShiftIR ? JCState::Exit1IR : JCState::Exit1DR;
+
     m_first_tdi_sit.reset();
     m_current_tdi_operation = ActionID::InvalidAction;
     return true;
@@ -569,7 +575,7 @@ JtagChain::Execute(TxInProgress &&tx) {
 
   Visitor completer(*this, tx, jstatus, jbegin, old_state);
   for (auto it = incomplete.begin(); it != incomplete.end(); it++) {
-    std::optional<bool> success = it->Visit(translator, it);
+    std::optional<bool> success = it->Visit(completer, it);
     if (!success || !*success) {
       m_state.state = JCState::Unknown;
       co_return tx.Finish();

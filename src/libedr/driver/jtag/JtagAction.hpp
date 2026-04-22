@@ -55,7 +55,7 @@ struct PutTMS {
 struct PutTDI {
   static inline constexpr auto g_id = ActionID::PutTDI;
 
-  const uint32_t num_bits;
+  const uint32_t num_bits : 31;
   const uint32_t last_tms : 1;
   using Payload = vss::Payload<vss::DependentBits<uint32_t>>;
 
@@ -107,7 +107,7 @@ struct PutTDI {
 struct PutTDIGetTDO {
   static inline constexpr auto g_id = ActionID::PutTDIGetTDO;
 
-  const uint32_t num_bits;
+  const uint32_t num_bits : 31;
   const uint32_t last_tms : 1;
   using Payload = vss::Payload<vss::DependentBits<uint32_t>>;
 

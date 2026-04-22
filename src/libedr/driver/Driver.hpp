@@ -167,11 +167,13 @@ public:
   }
 
   template <class T> T *Get(const TypedActionPosition<T> &pos) {
-    if (HadAllocationFailure())
+    auto in = m_storage.ins.From(pos.position.first);
+
+    TAction *action_ptr = vss::Extract<TAction>(in);
+    if (nullptr == action_ptr)
       return nullptr;
 
-    auto in = m_storage.ins.From(pos.position.first);
-    return reinterpret_cast<T *>(in.Get());
+    return action_ptr->template As<T>();
   }
 
   const DependentTransactions &GetDependent() const { return m_dependent; }

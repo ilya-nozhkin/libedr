@@ -36,9 +36,6 @@ class JtagChainTransaction {
   TRANSACTION_BODY(JtagChain);
 
 public:
-  // JCForgetChainStructure, JCSetIRLength, JCGoToState, JCSelectTAP, JCWriteIR,
-  // JCWriteDR, JCShiftDR
-
   void ForgetChainStructure() {
     if (!m_builder)
       return;
