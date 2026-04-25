@@ -2,10 +2,11 @@
 #define LIBEDR_API_TUNNELCOMMON_H
 
 #define ALL_DRIVERS(DO)                                                        \
-  DO(APB)                                                               \
+  DO(APB)                                                                      \
   DO(ByteStream)                                                               \
   DO(ExecutionGate)                                                            \
-  DO(Jtag)
+  DO(Jtag)                                                                     \
+  DO(JtagChain)
 
 #define FIND_DRIVER_FUNCTION(DRIVER_NAME)                                      \
   DRIVER_NAME Find##DRIVER_NAME(const char *name) {                            \

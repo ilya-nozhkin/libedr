@@ -83,7 +83,7 @@ public:
     if (!m_builder)
       return;
 
-    m_builder->Add<edr::JCWriteDR>(data, num_data_bits);
+    m_builder->Add<edr::JCShiftDR>(data, num_data_bits);
   }
 
   uint64_t GetShiftedData() {
