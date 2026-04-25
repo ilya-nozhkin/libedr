@@ -164,7 +164,7 @@ private:
 
       T piece = static_cast<T>(value) << this->m_offset;
 
-      (*this->m_storage) = (*this->m_storage) & ~mask | piece;
+      (*this->m_storage) = (*this->m_storage) & ~mask | (piece & mask);
 
       value >>= this_time;
       num_bits -= this_time;

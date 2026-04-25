@@ -33,8 +33,6 @@ TEST(JtagChain, can_access_first_tap_in_chain) {
   BitStream tdi_dest(reinterpret_cast<uint8_t *>(&tdi), 8 * sizeof(tdi));
 
   size_t pulled = jtag.PullTMSTDI(tms_dest, tdi_dest);
-  tms &= (1u << pulled) - 1;
-  tdi &= (1u << pulled) - 1;
 
   EXPECT_EQ(pulled, 25);
   EXPECT_EQ(tms, (1 << (14 + 10)) | 0b0011011111);
@@ -56,8 +54,6 @@ TEST(JtagChain, can_access_first_tap_in_chain) {
   tdi_dest = BitStream(reinterpret_cast<uint8_t *>(&tdi), 8 * sizeof(tdi));
 
   pulled = jtag.PullTMSTDI(tms_dest, tdi_dest);
-  tms &= (1ull << pulled) - 1;
-  tdi &= (1ull << pulled) - 1;
 
   EXPECT_EQ(pulled, 38);
   EXPECT_EQ(tms, (1ull << (31 + 2 + 4)) | 0b0011);

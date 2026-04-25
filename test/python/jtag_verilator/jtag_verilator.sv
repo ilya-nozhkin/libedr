@@ -8,6 +8,7 @@ module jtag_verilator ();
   edr_ByteStreamTunnel tunnel;
 
   edr_Jtag jtag;
+  edr_JtagChain jtag_chain;
 
   wire    tck;
   wire    tms;
@@ -88,6 +89,9 @@ module jtag_verilator ();
   initial begin
     wait (jtag != null);
     tunnel.RegisterDriver(jtag);
+
+    jtag_chain = make_edr_JtagChain(ctx, "JtagChain", jtag);
+    tunnel.RegisterDriver(jtag_chain);
 
     tunnel.StartServer(error);
     if (error.Fail()) begin

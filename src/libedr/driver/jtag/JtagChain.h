@@ -8,7 +8,7 @@
 
 namespace edr {
 
-class JtagChain final : public Driver<DriverID::JtagChain, JtagChainAction> {
+class JtagChain : public Driver<DriverID::JtagChain, JtagChainAction> {
 public:
   JtagChain(const DriverContext &ctx, std::string_view name, Jtag &jtag)
       : Driver(ctx, name), m_jtag(jtag) {}

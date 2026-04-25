@@ -24,3 +24,15 @@ class TestJTAGVerilator(EDRTestCase):
 
         idcode = int.from_bytes(tdo, "little")
         self.assertEqual(idcode, 0x149511C3)
+
+    def test_shift_idcode_jtag_chain(self):
+        tunnel = self.run_verilator("jtag_verilator")
+        chain: edr.JtagChain = tunnel.FindJtagChain("JtagChain")
+
+        xact: edr.JtagChainTransaction = chain.Initiate("read_idcode")
+        xact.ShiftDR(0, 32)
+        xact.Do()
+
+        idcode = xact.GetShiftedData()
+
+        self.assertEqual(idcode, 0x149511C3)
