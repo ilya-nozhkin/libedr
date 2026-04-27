@@ -7,26 +7,41 @@ function(add_verilated_model TARGET_NAME)
     ARG
     ""
     ""
-    "SOURCES;ARGS"
+    "SOURCES;ARGS;ENVIRONMENT;TOP_MODULE;DEPENDS"
     ${ARGN}
   )
 
+  if (NOT ARG_TOP_MODULE)
+    set(ARG_TOP_MODULE ${TARGET_NAME})
+  endif()
+
   add_custom_target(${TARGET_NAME}
-    COMMAND ${EDR_VERILATOR_EXECUTABLE}
-      --timing --trace --binary
+    COMMAND
+      ${CMAKE_COMMAND} -E env ${ARG_ENVIRONMENT}
+      ${EDR_VERILATOR_EXECUTABLE}
+      --timing --trace --cc --main --exe
       -Wall -CFLAGS -std=c++20
-      --top ${TARGET_NAME}
+      --top ${ARG_TOP_MODULE}
       -I${EDR_TEST_COMMON_VERILOG}
       ${EDR_API_BUILD_DIR}/libcedr.so
       ${EDR_API_BUILD_DIR}/edr_sv_api.sv
       ${EDR_TEST_COMMON_VERILOG}/test_tunnel.sv
       ${ARG_ARGS}
       ${ARG_SOURCES}
+    COMMAND
+      make "-j$$(nproc)" -C obj_dir -f V${ARG_TOP_MODULE}.mk V${ARG_TOP_MODULE}__pch.h.fast.gch V${ARG_TOP_MODULE}__pch.h.slow.gch || (exit 0)
+    COMMAND
+      cp -f obj_dir/V${ARG_TOP_MODULE}__pch.h.fast.gch obj_dir/V${ARG_TOP_MODULE}__pch.h.fast || (exit 0)
+    COMMAND
+      cp -f obj_dir/V${ARG_TOP_MODULE}__pch.h.slow.gch obj_dir/V${ARG_TOP_MODULE}__pch.h.slow || (exit 0)
+    COMMAND
+      make "-j$$(nproc)" -C obj_dir -f V${ARG_TOP_MODULE}.mk
     DEPENDS
       ${ARG_SOURCES}
       ${EDR_API_BUILD_DIR}/libcedr.so
       ${EDR_API_BUILD_DIR}/edr_sv_api.sv
       ${EDR_TEST_COMMON_VERILOG}/test_tunnel.sv
+      ${ARG_DEPENDS}
   )
 
   add_dependencies(python_test_dependencies ${TARGET_NAME})
@@ -81,4 +96,4 @@ endfunction()
 add_subdirectory(apb_verilator)
 add_subdirectory(jtag_verilator)
 add_subdirectory(tcp_socket_loopback)
-
+add_subdirectory(veer_eh2_debug)
