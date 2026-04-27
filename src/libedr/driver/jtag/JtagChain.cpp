@@ -443,6 +443,8 @@ public:
       if (nullptr != tdo_out)
         tdo.emplace(tdo_out->Bits());
 
+      (*m_jit)++;
+
       unsigned selected_tap = m_selected_tap_on_first_tdi_sit;
       unsigned last_shifted_tap = m_chain.m_num_taps;
 

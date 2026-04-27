@@ -4,3 +4,6 @@
 [submodule "third_party/apb"]
 	path = third_party/apb
 	url = https://github.com/iammituraj/apb.git
+[submodule "third_party/Cores-VeeR-EH2"]
+	path = third_party/Cores-VeeR-EH2
+	url = https://github.com/chipsalliance/Cores-VeeR-EH2.git
