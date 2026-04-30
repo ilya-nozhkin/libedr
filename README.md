@@ -11,7 +11,7 @@ And since all driver APIs are abstract, it should also be possible to implement 
 Supported interfaces and tunnels
 --------------------------------
 
-Currently, the only supported interfaces are JTAG and APB.
+Supported interfaces are JTAG, APB, RISC-V JTAG DTM.
 
 Tunnelling is possible via any bi-directional byte stream, TCP sockets and Unix domain sockets are supported out of the box.
 

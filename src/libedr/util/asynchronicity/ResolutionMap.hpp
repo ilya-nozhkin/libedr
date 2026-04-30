@@ -22,7 +22,7 @@ public:
     template <class... Args>
     Item(Args &&...args) : data(std::forward<Args>(args)...) {}
 
-    Resolver<Results...> resolver;
+    EagerResolver<Results...> resolver;
     T data;
   };
 

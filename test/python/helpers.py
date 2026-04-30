@@ -35,7 +35,7 @@ class EDRTestCase(unittest.TestCase):
         pipe_server = edr.NamedPipeServer(self.context, pipe_name, 1, self.error)
         self.assertTrue(self.error.Success(), self.error.Message())
 
-        command = f"./obj_dir/V{exe_name}"
+        command = f"../obj_dir/V{exe_name}"
 
         subp = subprocess.Popen([command, f"+pipe={pipe_name}"], text=True)
         self.subprocesses.append(subp)

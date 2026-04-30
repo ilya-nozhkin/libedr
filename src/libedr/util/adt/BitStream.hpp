@@ -222,7 +222,10 @@ template <class T> struct std::formatter<edr::BitStream<T>, char> {
         size_t this_time = std::min<size_t>(num_chunk_bits, num_bits);
         size_t offset = num_bits - this_time;
 
-        T chunk = stream.template Read<T>(this_time);
+        edr::BitStream<T> chunk_stream = stream;
+        chunk_stream.Skip(num_bits - this_time);
+
+        T chunk = chunk_stream.template Read<T>(this_time);
 
         char buffer[num_chunk_bits];
         for (size_t i = 0; i < this_time; i++)

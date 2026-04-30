@@ -7,6 +7,7 @@
 #include "libedr/driver/execution_gate/ExecutionGateAction.hpp"
 #include "libedr/driver/jtag/JtagAction.hpp"
 #include "libedr/driver/jtag/JtagChainAction.hpp"
+#include "libedr/driver/riscv/RVDTMAction.hpp"
 
 namespace edr {
 
@@ -51,6 +52,7 @@ using ActionByDriver =
                        Pair<DriverID::Jtag, JtagAction>,
                        Pair<DriverID::APB, APBAction>,
                        Pair<DriverID::JtagChain, JtagChainAction>,
+                       Pair<DriverID::RVDTM, RVDTMAction>,
                        Pair<DriverID::ExecutionGate, ExecutionGateAction>>;
 // ===========================
 

@@ -29,9 +29,19 @@ private:
   static constexpr unsigned g_max_num_taps = 256;
   static constexpr unsigned g_max_ir_length = 8 * sizeof(JCWriteIR::value);
 
+  struct SingleIR {
+    unsigned tap_id;
+    uint32_t ir_value;
+
+    friend bool operator==(const SingleIR &left, const SingleIR &right) {
+      return left.tap_id == right.tap_id && left.ir_value == right.ir_value;
+    }
+  };
+
   struct ChainState {
     JCState state = JCState::Unknown;
     unsigned selected_tap = 0;
+    std::optional<SingleIR> last_written_single_ir;
   };
 
   class Visitor;
