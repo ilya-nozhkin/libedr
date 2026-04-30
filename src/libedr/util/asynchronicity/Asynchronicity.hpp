@@ -51,7 +51,10 @@ concept TaskOwner = requires(T asynchronous, void *ptr, size_t size) {
 
 } // namespace
 
-template <class... R> struct Resolver;
+template <bool t_eager_continuation, class... R> struct Resolver;
+
+template <class... R> using EagerResolver = Resolver<true, R...>;
+template <class... R> using DelayedResolver = Resolver<false, R...>;
 
 template <class P, class... R> struct AwaitableBase {
 public:
@@ -175,7 +178,7 @@ struct FallbackStorage<t_default_init_if_needed> {
 
 template <class... R>
 struct AwaitableRef : public AwaitableBase<AwaitableRef<R...>, R...> {
-  AwaitableRef(Resolver<R...> &resolver) : m_resolver(resolver) {}
+  AwaitableRef(EagerResolver<R...> &resolver) : m_resolver(resolver) {}
 
   template <class F> auto ForResolver(F &&func) {
     return std::forward<F>(func)(m_resolver);
@@ -191,26 +194,31 @@ struct AwaitableRef : public AwaitableBase<AwaitableRef<R...>, R...> {
 
   operator bool() const { return true; }
 
-  Resolver<R...> &m_resolver;
+  EagerResolver<R...> &m_resolver;
   FallbackStorage<true, R...> m_fallback;
 };
 
-template <class... R> struct Resolver : public ContinuationStorage {
+template <bool t_eager_continuation, class... R>
+struct Resolver : public ContinuationStorage {
   Resolver() = default;
 
   using StorageType = TaskResultHelper<R...>::Type;
 
-  template <class... Args>
-  std::coroutine_handle<> return_value(Args &&...result) {
+  template <class... Args> void return_value(Args &&...result) {
     m_result.emplace(std::forward<Args>(result)...);
-    return this->HandleResultReady();
+    if constexpr (t_eager_continuation)
+      this->HandleResultReady();
   }
 
   std::optional<StorageType> m_result;
 };
 
-template <> struct Resolver<> : public ContinuationStorage {
-  std::coroutine_handle<> return_void() { return this->HandleResultReady(); }
+template <bool t_eager_continuation>
+struct Resolver<t_eager_continuation> : public ContinuationStorage {
+  void return_void() {
+    if constexpr (t_eager_continuation)
+      this->HandleResultReady();
+  }
 };
 
 template <bool t_def_init, TaskOwner Owner, class... R> struct Promise;
@@ -321,7 +329,7 @@ template <TaskOwner Owner> struct OwnedFrame {
 };
 
 template <bool t_def_init, TaskOwner Owner, class... R>
-struct Promise : public Resolver<R...>, public OwnedFrame<Owner> {
+struct Promise : public DelayedResolver<R...>, public OwnedFrame<Owner> {
   static OwnedTask<t_def_init, Owner, R...>
   get_return_object_on_allocation_failure() {
     return OwnedTask<t_def_init, Owner, R...>(nullptr);
@@ -349,6 +357,7 @@ struct Promise : public Resolver<R...>, public OwnedFrame<Owner> {
       Promise<t_def_init, Owner, R...> &m_self;
     };
 
+    this->HandleResultReady();
     return FinalDecider(*this);
   }
 

@@ -79,7 +79,7 @@ struct JCGoToState {
       : state(state), wait_there_cycles(wait_there_cycles) {}
 
   template <StructureFormatter F> void Format(F &fmt) {
-    fmt.Name("Go-To-State");
+    fmt.Name("->");
     fmt.Value("{}", state);
 
     if (wait_there_cycles)

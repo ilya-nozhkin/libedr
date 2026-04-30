@@ -6,7 +6,8 @@
   DO(ByteStream)                                                               \
   DO(ExecutionGate)                                                            \
   DO(Jtag)                                                                     \
-  DO(JtagChain)
+  DO(JtagChain)                                                                \
+  DO(RVDTM)
 
 #define FIND_DRIVER_FUNCTION(DRIVER_NAME)                                      \
   DRIVER_NAME Find##DRIVER_NAME(const char *name) {                            \

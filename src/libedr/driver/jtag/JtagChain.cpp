@@ -265,12 +265,6 @@ public:
     if (need_to_flush_tdi && !FlushTDI(sit))
       return false;
 
-    if (!GoToState(JCState::ShiftIR))
-      return false;
-
-    if (!FlushTMS())
-      return false;
-
     assert(m_state.selected_tap < m_chain.m_num_taps);
 
     if (m_current_tdi_operation == ActionID::InvalidAction) {
@@ -279,7 +273,11 @@ public:
       m_current_tdi_operation = ActionID::JCWriteIR;
       m_last_tdied_tap = m_chain.m_num_taps;
       m_total_tdi = 0;
-    }
+
+      m_maybe_single_ir =
+          SingleIR{.tap_id = m_state.selected_tap, .ir_value = in.value};
+    } else
+      m_maybe_single_ir.reset();
 
     while (m_last_tdied_tap != m_state.selected_tap) {
       m_last_tdied_tap--;
@@ -300,12 +298,6 @@ public:
             m_state.selected_tap > m_last_tdied_tap;
 
     if (need_to_flush_tdi && !FlushTDI(sit))
-      return false;
-
-    if (!GoToState(JCState::ShiftDR))
-      return false;
-
-    if (!FlushTMS())
       return false;
 
     assert(m_state.selected_tap < m_chain.m_num_taps);
@@ -352,6 +344,24 @@ public:
   bool FlushTDI(const SourceIterator &send) {
     if (m_current_tdi_operation == ActionID::InvalidAction)
       return true;
+
+    bool writing_ir = m_current_tdi_operation == ActionID::JCWriteIR;
+    if (writing_ir && m_maybe_single_ir == m_state.last_written_single_ir) {
+      if (nullptr == m_jbuilder)
+        for (auto it = *m_first_tdi_sit; it != send; it++)
+          m_ctx.Done(it);
+
+      m_first_tdi_sit.reset();
+      m_current_tdi_operation = ActionID::InvalidAction;
+      return true;
+    }
+
+    auto target_state = writing_ir ? JCState::ShiftIR : JCState::ShiftDR;
+    if (!GoToState(target_state))
+      return false;
+
+    if (!FlushTMS())
+      return false;
 
     if (nullptr != m_jbuilder) {
       auto dest = [&]() -> std::optional<BitStream<uint32_t>> {
@@ -476,6 +486,7 @@ public:
     m_state.state =
         m_state.state == JCState::ShiftIR ? JCState::Exit1IR : JCState::Exit1DR;
 
+    m_state.last_written_single_ir = m_maybe_single_ir;
     m_first_tdi_sit.reset();
     m_current_tdi_operation = ActionID::InvalidAction;
     return true;
@@ -522,6 +533,7 @@ private:
   ActionID m_current_tdi_operation = ActionID::InvalidAction;
   unsigned m_last_tdied_tap = 0;
   uint32_t m_total_tdi = 0;
+  std::optional<SingleIR> m_maybe_single_ir;
 };
 
 JtagChain::CheckedTask<JtagChain::Status>

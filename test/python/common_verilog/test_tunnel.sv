@@ -22,6 +22,8 @@ module test_tunnel (
     error_o = make_edr_Error();
 
     context_o = make_edr_Context(edr_LogLevel_TRACE);
+    context_o.AddFile("rtl.log");
+
     execution_gate_o = make_edr_ExecutionGate(context_o, "ExecutionGate");
 
     pipe = make_edr_ByteStream_ConnectNamedPipe(context_o, get_pipe_name(), error_o);

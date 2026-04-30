@@ -82,9 +82,12 @@ function(add_python_tests_from_current_directory)
   separate_arguments(EDR_PYTHON_TESTS UNIX_COMMAND ${EDR_PYTHON_TESTS_OUT})
 
   foreach(TEST IN LISTS EDR_PYTHON_TESTS)
+    file(MAKE_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${TEST})
+
     add_test(
       NAME ${TEST}
       COMMAND ${EDR_PYTHON3_EXECUTABLE} ${PYTHON_TESTS_DIR}/launcher.py --syspath ${EDR_API_BUILD_DIR} ${CMAKE_CURRENT_LIST_DIR} ${TEST}
+      WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/${TEST}
     )
   
     if (ARG_DEPENDENCIES)

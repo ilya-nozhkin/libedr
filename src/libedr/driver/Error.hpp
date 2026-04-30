@@ -194,6 +194,116 @@ struct CauseTargetError {
   }
 };
 
+struct CauseFailedToClearErrorFlag {
+  static inline constexpr auto g_id = CauseID::FailedToClearErrorFlag;
+
+  uint32_t stuck_value;
+
+  using Payload = vss::Payload<vss::String>;
+
+  CauseFailedToClearErrorFlag(std::string_view /*flag_name*/,
+                              uint32_t stuck_value)
+      : stuck_value(stuck_value) {}
+
+  std::string_view GetFlagName() { return vss::Get<0>(*this).View(); }
+
+  template <StructureFormatter F> void Format(F &fmt) {
+    fmt.Value("Failed to clear '{}'", GetFlagName());
+    fmt.Field("value", "{:#x}", stuck_value);
+  }
+
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             std::string_view flag_name,
+                             uint32_t /*stuck_value*/) {
+    Payload::Emplace(os, flag_name);
+  }
+
+  std::optional<size_t> SizeOfPayload(Payload &payload, size_t max_size) {
+    return payload.Size(max_size);
+  }
+
+  CauseFailedToClearErrorFlag(const CauseFailedToClearErrorFlag &) = delete;
+  CauseFailedToClearErrorFlag(CauseFailedToClearErrorFlag &&) = delete;
+};
+
+struct CauseInvalidVersion {
+  static inline constexpr auto g_id = CauseID::InvalidVersion;
+
+  uint32_t version;
+
+  using Payload = vss::Payload<vss::String>;
+
+  CauseInvalidVersion(std::string_view /*component_name*/, uint32_t version)
+      : version(version) {}
+
+  std::string_view GetComponentName() { return vss::Get<0>(*this).View(); }
+
+  template <StructureFormatter F> void Format(F &fmt) {
+    fmt.Value("Invalid {} version '{}'", GetComponentName(), version);
+  }
+
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             std::string_view component_name,
+                             uint32_t /*version*/) {
+    Payload::Emplace(os, component_name);
+  }
+
+  std::optional<size_t> SizeOfPayload(Payload &payload, size_t max_size) {
+    return payload.Size(max_size);
+  }
+
+  CauseInvalidVersion(const CauseInvalidVersion &) = delete;
+  CauseInvalidVersion(CauseInvalidVersion &&) = delete;
+};
+
+struct CauseValueOutOfRange {
+  static inline constexpr auto g_id = CauseID::ValueOutOfRange;
+
+  uint64_t value;
+  uint64_t min_value;
+  uint64_t max_value;
+
+  using Payload = vss::Payload<vss::String>;
+
+  CauseValueOutOfRange(std::string_view /*value_name*/, uint64_t value,
+                       uint64_t min_value, uint64_t max_value)
+      : value(value), min_value(min_value), max_value(max_value) {}
+
+  std::string_view GetValueName() { return vss::Get<0>(*this).View(); }
+
+  template <StructureFormatter F> void Format(F &fmt) {
+    fmt.Value("{} = {:#x} is out of supported range [{:#x} : {:#x}]",
+              GetValueName(), value, min_value, max_value);
+  }
+
+  static void EmplacePayload(vss::OutputStream auto &os,
+                             std::string_view value_name, uint64_t /*value*/,
+                             uint64_t /*min_value*/, uint64_t /*max_value*/) {
+    Payload::Emplace(os, value_name);
+  }
+
+  std::optional<size_t> SizeOfPayload(Payload &payload, size_t max_size) {
+    return payload.Size(max_size);
+  }
+
+  CauseValueOutOfRange(const CauseValueOutOfRange &) = delete;
+  CauseValueOutOfRange(CauseValueOutOfRange &&) = delete;
+};
+
+struct CauseMaxLatencyReached {
+  static inline constexpr auto g_id = CauseID::MaxLatencyReached;
+
+  uint32_t max_latency;
+
+  CauseMaxLatencyReached(uint32_t max_latency) : max_latency(max_latency) {}
+
+  template <StructureFormatter F> void Format(F &fmt) {
+    fmt.Value(
+        "Reached the maximum allowed latency of {} during the calibration",
+        max_latency);
+  }
+};
+
 struct CauseIDGetter {
   template <class C> consteval CauseID operator()() { return C::g_id; }
 };
@@ -205,7 +315,8 @@ using Cause = vss::VariantBase<
     CauseStringMessage, CauseNestedError, CauseTerminated, CauseErrno,
     CauseInvalidArgument, CauseTimeoutInCycles, CauseTargetError,
     CauseInvalidJtagTapID, CauseInvalidJtagState, CauseUnstableJtagState,
-    CauseIRLengthTooBig>;
+    CauseIRLengthTooBig, CauseFailedToClearErrorFlag, CauseInvalidVersion,
+    CauseValueOutOfRange, CauseMaxLatencyReached>;
 
 struct ActionError final {
   using Payload = vss::Payload<ActionOrUnknown, Cause>;

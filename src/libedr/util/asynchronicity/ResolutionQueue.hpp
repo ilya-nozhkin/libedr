@@ -34,7 +34,7 @@ public:
 
   private:
     Item *m_next = nullptr;
-    Resolver<Results...> m_resolver = {};
+    EagerResolver<Results...> m_resolver = {};
     T m_data;
   };
 

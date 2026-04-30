@@ -81,8 +81,8 @@ public:
   bool ResultResolverIsPending() { return m_result_resolver.has_value(); }
 
 private:
-  std::optional<Resolver<>> m_empty_resolver;
-  std::optional<Resolver<Result>> m_result_resolver;
+  std::optional<EagerResolver<>> m_empty_resolver;
+  std::optional<EagerResolver<Result>> m_result_resolver;
 };
 
 class MockAllocator {
