@@ -9,7 +9,7 @@
 namespace edr {
 
 PullAPB::PullAPB(const DriverContext &ctx, std::string_view name,
-                 ExecutionGate *exe_gate)
+                 ExecutionGateImpl *exe_gate)
     : APB(ctx, name), m_exe_gate(exe_gate),
       m_command_generator(GenerateCommands()),
       m_result_consumer(ConsumeResults()) {}

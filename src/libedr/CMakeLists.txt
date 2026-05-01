@@ -9,6 +9,7 @@ target_include_directories(libedr PUBLIC
 )
 
 add_subdirectory(driver)
+add_subdirectory(tunnel)
 
 install(TARGETS libedr DESTINATION lib)
 install(

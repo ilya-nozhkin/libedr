@@ -135,17 +135,18 @@ inline constexpr JCTransitions g_jc_transitions = ComputeTransitions();
 
 }; // namespace
 
-class JtagChain::Visitor {
+class JtagChainImpl::Visitor {
 public:
   using SourceIterator = TxInProgress::Iterator;
 
-  Visitor(JtagChain &chain, JtagChain::TxInProgress &ctx,
+  Visitor(JtagChainImpl &chain, JtagChainImpl::TxInProgress &ctx,
           Jtag::Builder &jbuilder, ChainState &state)
       : m_chain(chain), m_ctx(ctx), m_jbuilder(&jbuilder), m_state(state),
         m_tms_stream(NewTMSStream()) {}
 
-  Visitor(JtagChain &chain, JtagChain::TxInProgress &ctx, Jtag::Status &jstatus,
-          Jtag::Status::Iterator jbegin, ChainState &state)
+  Visitor(JtagChainImpl &chain, JtagChainImpl::TxInProgress &ctx,
+          Jtag::Status &jstatus, Jtag::Status::Iterator jbegin,
+          ChainState &state)
       : m_chain(chain), m_ctx(ctx), m_jstatus(&jstatus), m_jit(jbegin),
         m_jend(jstatus.Complete().end()), m_state(state),
         m_tms_stream(NewTMSStream()) {}
@@ -513,8 +514,8 @@ private:
   }
 
   bool m_translating;
-  JtagChain &m_chain;
-  JtagChain::TxInProgress &m_ctx;
+  JtagChainImpl &m_chain;
+  JtagChainImpl::TxInProgress &m_ctx;
 
   Jtag::Builder *m_jbuilder = nullptr;
   Jtag::Status *m_jstatus = nullptr;
@@ -536,8 +537,8 @@ private:
   std::optional<SingleIR> m_maybe_single_ir;
 };
 
-JtagChain::CheckedTask<JtagChain::Status>
-JtagChain::Execute(TxInProgress &&tx) {
+JtagChainImpl::CheckedTask<JtagChainImpl::Status>
+JtagChainImpl::Execute(TxInProgress &&tx) {
   auto jbuilder = m_jtag.Initiate(tx, "Shift bits");
 
   std::unique_lock<std::mutex> lock(m_mutex);

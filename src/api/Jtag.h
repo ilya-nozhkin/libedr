@@ -84,7 +84,8 @@ public:
            ExecutionGate &exe_gate)
       : Jtag(context_sp,
              &context_sp->MakeWith<edr::PullJtag>(
-                 context_sp->PersistFormat("{}", name), exe_gate.Self())) {}
+                 context_sp->PersistFormat("{}", name),
+                 static_cast<edr::ExecutionGateImpl *>(exe_gate.Self()))) {}
 
   uint32_t PullTMSTDI(std::byte *tms_dest, uint32_t max_tms_bits,
                       std::byte *tdi_dest, uint32_t max_tdi_bits) {

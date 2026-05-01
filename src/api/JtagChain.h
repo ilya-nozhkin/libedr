@@ -111,7 +111,7 @@ public:
   JtagChain(const std::shared_ptr<Context> &context_sp, const char *name,
             Jtag &jtag)
       : JtagChain(context_sp,
-                  &context_sp->MakeWith<edr::JtagChain>(
+                  &context_sp->MakeWith<edr::JtagChainImpl>(
                       context_sp->PersistFormat("{}", name), *jtag.Self())) {}
 };
 

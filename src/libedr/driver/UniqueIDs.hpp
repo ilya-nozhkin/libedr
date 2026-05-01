@@ -5,6 +5,16 @@
 
 namespace edr {
 
+// DEFINE YOUR DRIVER HERE
+// =======================
+#define ALL_EDR_DRIVERS(F)                                                     \
+  F(ByteStream)                                                                \
+  F(Jtag)                                                                      \
+  F(ExecutionGate)                                                             \
+  F(APB)                                                                       \
+  F(JtagChain)                                                                 \
+  F(RVDTM)
+
 enum class DriverID : uint32_t {
   ByteStream = 0,
   Jtag = 1000,
