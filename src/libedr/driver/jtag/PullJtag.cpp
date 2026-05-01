@@ -7,7 +7,7 @@
 namespace edr {
 
 PullJtag::PullJtag(const DriverContext &ctx, std::string_view name,
-                   ExecutionGate *exe_gate)
+                   ExecutionGateImpl *exe_gate)
     : Jtag(ctx, name), m_exe_gate(exe_gate),
       m_tms_tdi_generator(GenerateTMSTDI()), m_tdo_generator(GenerateTDO()) {}
 

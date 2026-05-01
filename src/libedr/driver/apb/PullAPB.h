@@ -32,7 +32,7 @@ public:
   };
 
   PullAPB(const DriverContext &ctx, std::string_view name,
-          ExecutionGate *exe_gate = nullptr);
+          ExecutionGateImpl *exe_gate = nullptr);
 
   ~PullAPB() { Terminate(); }
 
@@ -48,7 +48,7 @@ public:
   size_t PushResults(const PushedStatus *status_src, const uint32_t *data_src,
                      size_t num_results);
 
-  ExecutionGate *GetExecutionGate() { return m_exe_gate; }
+  ExecutionGateImpl *GetExecutionGate() { return m_exe_gate; }
 
 private:
   struct QueueItem {
@@ -70,7 +70,7 @@ private:
   CommandGenerator GenerateCommands();
   ResultGenerator ConsumeResults();
 
-  ExecutionGate *m_exe_gate;
+  ExecutionGateImpl *m_exe_gate;
 
   std::mutex m_mutex;
 

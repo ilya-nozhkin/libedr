@@ -46,7 +46,7 @@ class ExecutionGate : public DriverBase {
 
 public:
   ExecutionGate(const std::shared_ptr<Context> &context_sp, const char *name)
-      : ExecutionGate(context_sp, &context_sp->MakeWith<edr::ExecutionGate>(
+      : ExecutionGate(context_sp, &context_sp->MakeWith<edr::ExecutionGateImpl>(
                                       context_sp->PersistFormat("{}", name))) {}
 
   ExecutionGateMode SetMode(ExecutionGateMode mode) {
@@ -54,14 +54,16 @@ public:
       return ExecutionGateMode::Terminated;
 
     return static_cast<ExecutionGateMode>(
-        Self()->SetMode(static_cast<edr::ExecutionGateMode>(mode)));
+        static_cast<edr::ExecutionGateImpl *>(Self())->SetMode(
+            static_cast<edr::ExecutionGateMode>(mode)));
   }
 
   void StallIfNeeded(uint8_t target_is_idle) {
     if (nullptr == m_driver)
       return;
 
-    Self()->StallIfNeeded(target_is_idle != 0);
+    static_cast<edr::ExecutionGateImpl *>(Self())->StallIfNeeded(
+        target_is_idle != 0);
   }
 };
 

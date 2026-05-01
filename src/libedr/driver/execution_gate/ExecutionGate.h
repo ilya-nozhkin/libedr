@@ -9,12 +9,13 @@
 
 namespace edr {
 
-class ExecutionGate
-    : public Driver<DriverID::ExecutionGate, ExecutionGateAction> {
-public:
-  ExecutionGate(const DriverContext &ctx, std::string_view name);
+using ExecutionGate = Driver<DriverID::ExecutionGate, ExecutionGateAction>;
 
-  ~ExecutionGate() { Terminate(); }
+class ExecutionGateImpl : public ExecutionGate {
+public:
+  using ExecutionGate::ExecutionGate;
+
+  ~ExecutionGateImpl() { Terminate(); }
 
   void Terminate() override;
 

@@ -64,7 +64,8 @@ public:
           ExecutionGate &exe_gate)
       : APB(context_sp,
             &context_sp->MakeWith<edr::PullAPB>(
-                context_sp->PersistFormat("{}", name), exe_gate.Self())) {}
+                context_sp->PersistFormat("{}", name),
+                static_cast<edr::ExecutionGateImpl *>(exe_gate.Self()))) {}
 
   uint32_t PullCommands(uint8_t *commands_dst, uint32_t *addr_dst,
                         uint32_t *data_dst, uint32_t max_num_commands) {

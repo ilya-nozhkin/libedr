@@ -3,12 +3,10 @@
 
 #include "ByteStream.h"
 #include "Context.h"
-#include "ExecutionGate.h"
-#include "Jtag.h"
 #include "TunnelCommon.h"
 
 #include "api/DriverBase.h"
-#include "libedr/tunnel/ByteStreamTunnel.hpp"
+#include "libedr/tunnel/ByteStreamTunnel.h"
 
 #include <memory>
 

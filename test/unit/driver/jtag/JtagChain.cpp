@@ -15,7 +15,7 @@ TEST(JtagChain, can_access_first_tap_in_chain) {
   Logger logger(logger_output, LogLevel::TRACE);
   DriverContext ctx(logger);
   PullJtag jtag(ctx, "JTAG");
-  JtagChain chain(ctx, "JtagChain", jtag);
+  JtagChainImpl chain(ctx, "JtagChain", jtag);
 
   auto tx = chain.Initiate("tx");
   tx.Add<JCSetIRLength>(0, 5);

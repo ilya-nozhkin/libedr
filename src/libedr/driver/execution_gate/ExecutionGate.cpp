@@ -6,10 +6,7 @@
 
 namespace edr {
 
-ExecutionGate::ExecutionGate(const DriverContext &ctx, std::string_view name)
-    : Driver(ctx, name) {}
-
-void ExecutionGate::Terminate() {
+void ExecutionGateImpl::Terminate() {
   {
     std::scoped_lock<std::mutex> lock(m_mutex);
     m_mode = ExecutionGateMode::Terminated;
@@ -18,12 +15,12 @@ void ExecutionGate::Terminate() {
   m_on_new_request.notify_all();
 }
 
-void ExecutionGate::Join(const std::coroutine_handle<> &to_complete) {
+void ExecutionGateImpl::Join(const std::coroutine_handle<> &to_complete) {
   while (!to_complete.done())
     std::this_thread::yield();
 }
 
-ExecutionGateMode ExecutionGate::SetMode(ExecutionGateMode mode) {
+ExecutionGateMode ExecutionGateImpl::SetMode(ExecutionGateMode mode) {
   {
     std::scoped_lock<std::mutex> lock(m_mutex);
 
@@ -37,7 +34,7 @@ ExecutionGateMode ExecutionGate::SetMode(ExecutionGateMode mode) {
   return m_mode;
 }
 
-void ExecutionGate::StallIfNeeded(bool target_is_idle) {
+void ExecutionGateImpl::StallIfNeeded(bool target_is_idle) {
   std::unique_lock<std::mutex> lock(m_mutex);
 
   do {
@@ -58,7 +55,7 @@ void ExecutionGate::StallIfNeeded(bool target_is_idle) {
   } while (true);
 }
 
-void ExecutionGate::AddPending() {
+void ExecutionGateImpl::AddPending() {
   {
     std::scoped_lock<std::mutex> lock(m_mutex);
     m_num_requests++;
@@ -67,13 +64,13 @@ void ExecutionGate::AddPending() {
   m_on_new_request.notify_all();
 }
 
-void ExecutionGate::RemovePending() {
+void ExecutionGateImpl::RemovePending() {
   std::scoped_lock<std::mutex> lock(m_mutex);
   m_num_requests--;
 }
 
-ExecutionGate::CheckedTask<ExecutionGate::Status>
-ExecutionGate::Execute(TxInProgress &&tx) {
+ExecutionGateImpl::CheckedTask<ExecutionGate::Status>
+ExecutionGateImpl::Execute(TxInProgress &&tx) {
   for (auto action : tx.Incomplete()) {
     auto [set_mode, set_mode_out] = action.As<SetExecutionGateMode>();
     assert(nullptr != set_mode);

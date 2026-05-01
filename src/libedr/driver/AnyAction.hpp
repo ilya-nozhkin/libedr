@@ -13,6 +13,10 @@ namespace edr {
 
 namespace {
 
+struct TailGuard {
+  using Action = ::edr::Action<>;
+};
+
 template <IsAction... TActions> struct JoinActions;
 
 template <ActionType... THeadTypes, IsAction... TTail>
@@ -38,23 +42,19 @@ template <class... TPairs> struct ActionByDriverImpl {
   template <class F> static void ForID(DriverID id, F &&func) {
     (
         [&]() {
-          if (id == TPairs::g_id)
-            func.template operator()<TPairs::g_id, typename TPairs::Action>();
+          if constexpr (!std::is_same_v<TPairs, TailGuard>)
+            if (id == TPairs::g_id)
+              func.template operator()<TPairs::g_id, typename TPairs::Action>();
         }(),
         ...);
   }
 };
 
-// DEFINE YOUR DRIVER HERE
-// ===========================
-using ActionByDriver =
-    ActionByDriverImpl<Pair<DriverID::ByteStream, ByteStreamAction>,
-                       Pair<DriverID::Jtag, JtagAction>,
-                       Pair<DriverID::APB, APBAction>,
-                       Pair<DriverID::JtagChain, JtagChainAction>,
-                       Pair<DriverID::RVDTM, RVDTMAction>,
-                       Pair<DriverID::ExecutionGate, ExecutionGateAction>>;
-// ===========================
+using ActionByDriver = ActionByDriverImpl<
+#define DEFINE_PAIR(DRIVER) Pair<DriverID::DRIVER, DRIVER##Action>,
+    ALL_EDR_DRIVERS(DEFINE_PAIR)
+#undef DEFINE_PAIR
+        TailGuard>;
 
 using AnyAction = ActionByDriver::AnyAction;
 

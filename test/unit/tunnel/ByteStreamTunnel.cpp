@@ -5,7 +5,7 @@
 #include "libedr/driver/Error.hpp"
 #include "libedr/driver/Logger.hpp"
 #include "libedr/driver/bytestream/ByteStreamAction.hpp"
-#include "libedr/tunnel/ByteStreamTunnel.hpp"
+#include "libedr/tunnel/ByteStreamTunnel.h"
 
 #include <gtest/gtest.h>
 

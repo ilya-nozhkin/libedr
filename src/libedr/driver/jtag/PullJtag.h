@@ -15,7 +15,7 @@ class PullJtag final : public Jtag {
 
 public:
   PullJtag(const DriverContext &ctx, std::string_view name,
-           ExecutionGate *exe_gate = nullptr);
+           ExecutionGateImpl *exe_gate = nullptr);
 
   ~PullJtag() { Terminate(); }
 
@@ -30,7 +30,7 @@ public:
 
   size_t PushTDO(BitStream<const BitStorage> &tdo_source);
 
-  ExecutionGate *GetExecutionGate() { return m_exe_gate; }
+  ExecutionGateImpl *GetExecutionGate() { return m_exe_gate; }
 
 private:
   struct QueueItem {
@@ -51,7 +51,7 @@ private:
   TMSTDIGenerator GenerateTMSTDI();
   TDOGenerator GenerateTDO();
 
-  ExecutionGate *m_exe_gate;
+  ExecutionGateImpl *m_exe_gate;
 
   std::mutex m_mutex;
 

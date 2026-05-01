@@ -8,12 +8,14 @@
 
 namespace edr {
 
-class JtagChain : public Driver<DriverID::JtagChain, JtagChainAction> {
-public:
-  JtagChain(const DriverContext &ctx, std::string_view name, Jtag &jtag)
-      : Driver(ctx, name), m_jtag(jtag) {}
+using JtagChain = Driver<DriverID::JtagChain, JtagChainAction>;
 
-  ~JtagChain() override = default;
+class JtagChainImpl : public JtagChain {
+public:
+  JtagChainImpl(const DriverContext &ctx, std::string_view name, Jtag &jtag)
+      : JtagChain(ctx, name), m_jtag(jtag) {}
+
+  ~JtagChainImpl() override = default;
 
   void Terminate() override { m_jtag.Terminate(); }
 
