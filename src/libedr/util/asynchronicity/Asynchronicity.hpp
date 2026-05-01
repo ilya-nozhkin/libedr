@@ -342,7 +342,16 @@ struct Promise : public DelayedResolver<R...>, public OwnedFrame<Owner> {
       FinalDecider(Promise<t_def_init, Owner, R...> &self) : m_self(self) {}
 
       bool await_ready() const noexcept {
-        return g_task_state_awaitable_destroyed == m_self.m_continuation.load();
+        auto previous_state =
+            m_self.m_continuation.exchange(g_task_state_result_ready);
+        if (g_task_state_initial == previous_state)
+          return false;
+
+        if (g_task_state_awaitable_destroyed == previous_state)
+          return true;
+
+        previous_state.resume();
+        return true;
       }
 
       bool await_suspend(std::coroutine_handle<> continuation) const noexcept {
@@ -357,7 +366,6 @@ struct Promise : public DelayedResolver<R...>, public OwnedFrame<Owner> {
       Promise<t_def_init, Owner, R...> &m_self;
     };
 
-    this->HandleResultReady();
     return FinalDecider(*this);
   }
 
